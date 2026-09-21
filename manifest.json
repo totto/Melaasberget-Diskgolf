@@ -1,0 +1,16 @@
+{
+  "name": "Melåsberget Diskgolf",
+  "short_name": "Diskgolf",
+  "description": "3D course map, flythrough, and scorecard for the Melåsberget disc golf course at Flotsvegen 5, Jømna.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#8fb8d8",
+  "theme_color": "#8fb8d8",
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

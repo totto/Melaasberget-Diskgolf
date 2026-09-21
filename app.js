@@ -318,7 +318,7 @@ function makeMarker(kind) {
 }
 
 function buildUI() {
-  const panel = document.getElementById("panel");
+  const panel = document.getElementById("panel-body");
 
   const startDiv = document.createElement("div");
   startDiv.className = "hole-row";
@@ -914,3 +914,36 @@ document.getElementById("clear-scores-btn").onclick = () => {
 
 loadScores();
 renderScorecard();
+
+// ---------- PWA / mobile ----------
+
+if ("serviceWorker" in navigator) {
+  addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {
+      // Offline support just won't be available -- the app still works online.
+    });
+  });
+}
+
+function wireMobileToggle(toggleId, panelId) {
+  const btn = document.getElementById(toggleId);
+  const panel = document.getElementById(panelId);
+  if (!btn || !panel) return;
+  btn.onclick = () => {
+    const collapsed = panel.classList.toggle("collapsed");
+    btn.textContent = collapsed ? "+" : "−";
+  };
+}
+wireMobileToggle("panel-toggle", "panel");
+wireMobileToggle("scorecard-toggle", "scorecard");
+
+// On phones/touch devices, start both panels collapsed so the 3D view is immediately
+// usable for orbiting/placing instead of being covered by two full panels; desktop
+// keeps them expanded by default, as before.
+if (matchMedia("(max-width: 700px), (pointer: coarse)").matches) {
+  ["panel", "scorecard"].forEach((id) => document.getElementById(id)?.classList.add("collapsed"));
+  ["panel-toggle", "scorecard-toggle"].forEach((id) => {
+    const btn = document.getElementById(id);
+    if (btn) btn.textContent = "+";
+  });
+}
