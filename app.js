@@ -494,6 +494,12 @@ document.getElementById("export-btn").onclick = () => {
   el.style.display = "block";
 };
 
+document.getElementById("reset-btn").onclick = () => {
+  if (!confirm("Reset all placements to the hardcoded defaults? This clears anything saved from clicking on the terrain.")) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+};
+
 // ---------- Flythrough preview ----------
 // Walks start (parking) -> hole 1 tee -> hole 1 basket -> hole 2 tee -> ... in order.
 // A tee-to-basket leg on the same hole is simulated as an actual disc throw (arc +
