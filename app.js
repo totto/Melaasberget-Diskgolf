@@ -318,7 +318,7 @@ function makeMarker(kind) {
 }
 
 function buildUI() {
-  const panel = document.getElementById("panel-body");
+  const panel = document.getElementById("panel");
 
   const startDiv = document.createElement("div");
   startDiv.className = "hole-row";
@@ -1202,38 +1202,27 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-const isCoarseOrNarrow = () => matchMedia("(max-width: 700px), (pointer: coarse)").matches;
+// ---------- Top navigation ----------
+// One consistent, always-visible way to find Course/Scorecard/Photos, replacing three
+// separate +/- toggles that used to live in each panel's own corner of the screen.
+// Exactly one panel (or none) is shown at a time -- simpler to find things, and it
+// sidesteps the overlap problems that came from positioning multiple simultaneously-
+// open floating panels around the screen edges.
 
-function setPanelCollapsed(panelId, toggleId, collapsed) {
-  const panel = document.getElementById(panelId);
-  const btn = document.getElementById(toggleId);
-  if (panel) panel.classList.toggle("collapsed", collapsed);
-  if (btn) btn.textContent = collapsed ? "+" : "−";
+const NAV_PANEL_IDS = ["panel", "scorecard", "gallery"];
+
+function showPanel(id) {
+  NAV_PANEL_IDS.forEach((pid) => {
+    document.getElementById(pid)?.classList.toggle("active", pid === id);
+  });
+  document.querySelectorAll(".nav-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.target === id);
+  });
 }
 
-const MOBILE_PANELS = [
-  { toggleId: "panel-toggle", panelId: "panel" },
-  { toggleId: "scorecard-toggle", panelId: "scorecard" },
-  { toggleId: "gallery-toggle", panelId: "gallery" },
-];
-
-function wireMobileToggle(toggleId, panelId) {
-  const btn = document.getElementById(toggleId);
-  const panel = document.getElementById(panelId);
-  if (!btn || !panel) return;
-  // Phones/touch devices start collapsed so the 3D view isn't immediately covered by
-  // full-height panels; desktop keeps the previous always-open behavior.
-  if (isCoarseOrNarrow()) setPanelCollapsed(panelId, toggleId, true);
-  btn.onclick = () => {
-    const collapsed = panel.classList.contains("collapsed");
-    setPanelCollapsed(panelId, toggleId, !collapsed);
-    // On a narrow screen panels are full-width -- opening one while another is also
-    // open would still overlap it, so close the others automatically.
-    if (collapsed && isCoarseOrNarrow()) {
-      MOBILE_PANELS.forEach((p) => {
-        if (p.panelId !== panelId) setPanelCollapsed(p.panelId, p.toggleId, true);
-      });
-    }
-  };
-}
-MOBILE_PANELS.forEach((p) => wireMobileToggle(p.toggleId, p.panelId));
+document.querySelectorAll(".nav-btn").forEach((btn) => {
+  btn.onclick = () => showPanel(btn.classList.contains("active") ? null : btn.dataset.target);
+});
+document.querySelectorAll(".panel-close").forEach((btn) => {
+  btn.onclick = () => showPanel(null);
+});

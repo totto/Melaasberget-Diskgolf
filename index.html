@@ -20,21 +20,38 @@
     position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
     color: #fff; font-size: 18px; background: #1a2a3a; z-index: 20;
   }
-  #panel {
-    position: fixed; top: 12px; left: 12px; width: 300px; max-width: calc(100vw - 24px);
-    max-height: 90vh; overflow-y: auto; background: rgba(20, 24, 20, 0.82); color: #eee;
-    border-radius: 10px; padding: 14px; font-size: 13px; z-index: 10;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  #topnav {
+    position: fixed; top: 0; left: 0; right: 0; height: 48px; z-index: 20;
+    display: flex; background: rgba(10, 14, 10, 0.92); box-shadow: 0 2px 10px rgba(0,0,0,0.4);
   }
+  .nav-btn {
+    flex: 1; background: none; border: none; border-bottom: 3px solid transparent;
+    color: #bbb; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .nav-btn.active { color: #fff; border-bottom-color: #ffd166; background: rgba(255,255,255,0.06); }
+
+  /* One shared shape/position for every panel -- exactly one is ever visible at once
+     (see showPanel() in app.js), toggled via #topnav instead of each panel's own
+     +/- toggle. That also means no more per-panel positioning/overlap-avoidance
+     rules: they all anchor the same way, below the nav bar. */
+  .side-panel {
+    position: fixed; top: 58px; left: 12px; max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 70px); overflow-y: auto; display: none;
+    background: rgba(20, 24, 20, 0.92); color: #eee; border-radius: 10px; padding: 14px;
+    font-size: 13px; z-index: 10; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .side-panel.active { display: block; }
+  #panel { width: 340px; }
+  #scorecard { width: 560px; font-size: 12px; }
+  #gallery { width: 320px; font-size: 12px; }
+
   #panel h1 { font-size: 15px; margin: 0; }
   #panel .sub { color: #aaa; margin: 0 0 12px; font-size: 12px; }
-  .panel-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  .panel-toggle {
+  .panel-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  .panel-close {
     background: none; border: none; color: #fff; font-size: 18px; line-height: 1; cursor: pointer;
     padding: 4px 6px; flex-shrink: 0;
   }
-  #panel.collapsed .panel-body, #scorecard.collapsed .panel-body, #gallery.collapsed .panel-body { display: none; }
-  #panel.collapsed, #scorecard.collapsed, #gallery.collapsed { padding-bottom: 10px; }
   .hole-row { border-top: 1px solid rgba(255,255,255,0.12); padding: 8px 0; }
   .hole-row strong { display: block; margin-bottom: 6px; }
   .place-btn {
@@ -46,13 +63,13 @@
   .place-btn.start { background: #6ab0ff; }
   .place-btn.armed { outline: 2px solid #fff; }
   #hole-hud {
-    position: fixed; top: 16px; left: 50%; transform: translateX(-50%); display: none;
+    position: fixed; top: 58px; left: 50%; transform: translateX(-50%); display: none;
     background: rgba(10, 14, 10, 0.72); color: #fff; font-size: 15px; font-weight: 700;
     letter-spacing: 0.02em; padding: 8px 18px; border-radius: 8px; z-index: 10;
     box-shadow: 0 4px 16px rgba(0,0,0,0.35);
   }
   #debug-hud {
-    position: fixed; top: 60px; left: 50%; transform: translateX(-50%); display: none;
+    position: fixed; top: 102px; left: 50%; transform: translateX(-50%); display: none;
     background: rgba(0,0,0,0.6); color: #ffd166; font-size: 12px; font-family: ui-monospace, monospace;
     padding: 4px 10px; border-radius: 6px; z-index: 10;
   }
@@ -71,14 +88,7 @@
     position: fixed; bottom: 10px; left: 12px; color: #fff; font-size: 11px; opacity: 0.75;
     background: rgba(0,0,0,0.35); padding: 6px 10px; border-radius: 6px; z-index: 10;
   }
-  #scorecard {
-    position: fixed; top: 12px; right: 12px; width: 340px; max-width: calc(100vw - 24px);
-    max-height: 90vh; overflow-y: auto; background: rgba(20, 24, 20, 0.82); color: #eee;
-    border-radius: 10px; padding: 14px; font-size: 12px; z-index: 10;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-  }
   #scorecard h2 { font-size: 14px; margin: 0; }
-  #scorecard .panel-body { margin-top: 8px; }
   #scorecard-table-wrap { overflow-x: auto; }
   #scorecard-table { border-collapse: collapse; width: 100%; }
   #scorecard-table th, #scorecard-table td {
@@ -114,14 +124,7 @@
     border-radius: 6px; cursor: pointer;
   }
 
-  #gallery {
-    position: fixed; right: 12px; bottom: 12px; width: 280px; max-width: calc(100vw - 24px);
-    max-height: 60vh; overflow-y: auto; background: rgba(20, 24, 20, 0.82); color: #eee;
-    border-radius: 10px; padding: 14px; font-size: 12px; z-index: 10;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-  }
   #gallery h2 { font-size: 14px; margin: 0; }
-  #gallery .panel-body { margin-top: 8px; }
   .gallery-add { display: flex; gap: 6px; margin-bottom: 8px; }
   .photo-btn {
     flex: 1; display: block; text-align: center; padding: 8px; border-radius: 6px;
@@ -158,29 +161,19 @@
   #lightbox-close { background: #4a6fa5; color: #fff; }
 
   /* Touch/mobile: bigger tap targets, and >=16px inputs so iOS Safari doesn't
-     auto-zoom on focus. Panels default to collapsed on small screens (see app.js)
-     so the 3D view isn't immediately covered by two full-height panels. */
+     auto-zoom on focus. */
   @media (max-width: 700px), (pointer: coarse) {
-    .place-btn, #actions button, #scorecard-actions button, .panel-toggle {
+    .place-btn, #actions button, #scorecard-actions button, .nav-btn {
       padding: 10px 12px; font-size: 14px; min-height: 40px;
     }
     .remove-player-btn { min-height: 32px; min-width: 32px; font-size: 15px; }
     #player-name-input, .score-input, #export-output { font-size: 16px; }
     .score-input { width: 34px; padding: 6px 2px; }
-    /* #panel and #scorecard were each set to nearly-full viewport width but stayed
-       anchored to their own top:12px -- on desktop's wide viewport that never
-       collided (300px/340px fixed widths, opposite sides, plenty of gap), but full-
-       width on a phone put both panels' headers at the exact same position, stacked
-       directly on top of each other. Stack them vertically instead. */
-    #panel, #scorecard { width: calc(100vw - 24px); left: 12px; right: auto; }
-    #scorecard { top: 64px; }
+    /* Only one panel is ever visible at a time (see #topnav / showPanel() above), so
+       there's no overlap to avoid here anymore -- every panel can just be full-width. */
+    #panel, #scorecard, #gallery { width: calc(100vw - 24px); }
     #hole-hud { font-size: 13px; padding: 6px 12px; }
-    #debug-hud { top: 52px; font-size: 10px; }
-    /* #gallery is bottom-anchored (unlike panel/scorecard above), so it doesn't need
-       to join that top-down stack -- but going full-width here would still cover
-       #controls-help, which sits in the same bottom-left corner. */
-    #gallery { left: 12px; right: 12px; width: auto; }
-    #controls-help { display: none; }
+    #debug-hud { font-size: 10px; }
     .photo-btn, #lightbox-delete, #lightbox-close { min-height: 40px; }
   }
 </style>
@@ -191,65 +184,65 @@
 <div id="hole-hud"></div>
 <div id="debug-hud"></div>
 
-<div id="panel">
+<nav id="topnav">
+  <button class="nav-btn" data-target="panel">Course</button>
+  <button class="nav-btn" data-target="scorecard">Scorecard</button>
+  <button class="nav-btn" data-target="gallery">Photos</button>
+</nav>
+
+<div id="panel" class="side-panel">
   <div class="panel-header">
     <h1>Melåsberget disc golf — course builder</h1>
-    <button class="panel-toggle" id="panel-toggle" aria-label="Toggle course panel">−</button>
+    <button class="panel-close" aria-label="Close">✕</button>
   </div>
-  <div class="panel-body" id="panel-body">
-    <p class="sub">Real terrain + satellite imagery of Flotsvegen 5, Jømna. Tap "place", then tap the ground.</p>
-    <div id="hint"></div>
-    <div id="actions">
-      <button id="export-btn">Copy placements (JSON)</button>
-      <button id="fly-btn">Preview flythrough</button>
-      <button id="reset-btn">Reset to defaults</button>
-    </div>
-    <textarea id="export-output" readonly></textarea>
+  <p class="sub">Real terrain + satellite imagery of Flotsvegen 5, Jømna. Tap "place", then tap the ground.</p>
+  <div id="hint"></div>
+  <div id="actions">
+    <button id="export-btn">Copy placements (JSON)</button>
+    <button id="fly-btn">Preview flythrough</button>
+    <button id="reset-btn">Reset to defaults</button>
   </div>
+  <textarea id="export-output" readonly></textarea>
 </div>
 <div id="controls-help">Drag/1-finger to orbit · scroll/pinch to zoom · right-drag/2-finger to pan</div>
 
-<div id="scorecard">
+<div id="scorecard" class="side-panel">
   <div class="panel-header">
     <h2>Scorecard</h2>
-    <button class="panel-toggle" id="scorecard-toggle" aria-label="Toggle scorecard">−</button>
+    <button class="panel-close" aria-label="Close">✕</button>
   </div>
-  <div class="panel-body" id="scorecard-panel-body">
-    <div id="scorecard-table-wrap">
-      <table id="scorecard-table">
-        <thead><tr id="scorecard-header"></tr></thead>
-        <tbody id="scorecard-body"></tbody>
-      </table>
-    </div>
-    <div id="scorecard-actions">
-      <input id="player-name-input" type="text" placeholder="Player name" maxlength="24">
-      <button id="add-player-btn">Add player</button>
-      <button id="clear-scores-btn">Clear scores</button>
-    </div>
-    <div id="funstats">
-      <div id="fun-leader"></div>
-      <div id="fun-highlights"></div>
-      <div id="fun-records"></div>
-      <button id="save-round">Finish round</button>
-    </div>
+  <div id="scorecard-table-wrap">
+    <table id="scorecard-table">
+      <thead><tr id="scorecard-header"></tr></thead>
+      <tbody id="scorecard-body"></tbody>
+    </table>
+  </div>
+  <div id="scorecard-actions">
+    <input id="player-name-input" type="text" placeholder="Player name" maxlength="24">
+    <button id="add-player-btn">Add player</button>
+    <button id="clear-scores-btn">Clear scores</button>
+  </div>
+  <div id="funstats">
+    <div id="fun-leader"></div>
+    <div id="fun-highlights"></div>
+    <div id="fun-records"></div>
+    <button id="save-round">Finish round</button>
   </div>
 </div>
 
-<div id="gallery">
+<div id="gallery" class="side-panel">
   <div class="panel-header">
     <h2>Photos</h2>
-    <button class="panel-toggle" id="gallery-toggle" aria-label="Toggle photos">−</button>
+    <button class="panel-close" aria-label="Close">✕</button>
   </div>
-  <div class="panel-body" id="gallery-panel-body">
-    <div class="gallery-add">
-      <label class="photo-btn" for="photo-input">Add photo</label>
-      <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
-      <select id="photo-hole"></select>
-    </div>
-    <input type="text" id="photo-caption" placeholder="Caption (optional)" maxlength="80">
-    <div id="gallery-grid"></div>
-    <div id="gallery-empty">No photos yet</div>
+  <div class="gallery-add">
+    <label class="photo-btn" for="photo-input">Add photo</label>
+    <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
+    <select id="photo-hole"></select>
   </div>
+  <input type="text" id="photo-caption" placeholder="Caption (optional)" maxlength="80">
+  <div id="gallery-grid"></div>
+  <div id="gallery-empty">No photos yet</div>
 </div>
 
 <div id="lightbox" hidden>

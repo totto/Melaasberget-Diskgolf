@@ -63,8 +63,9 @@ Installable as a home-screen app (manifest + service worker) — on Android, Chr
 "Add to Home Screen"; on iOS Safari, use Share → "Add to Home Screen". Once installed (or just
 visited once), the whole app works offline: terrain and satellite imagery are already embedded
 in `index.html`, and the service worker (`sw.js`) caches the app shell plus the Three.js CDN
-modules on first load. On phones/touch devices the course-builder and scorecard panels start
-collapsed (tap the − / + in each panel's header to toggle) so the 3D view isn't covered.
+modules on first load. A top nav bar (Course / Scorecard / Photos) shows one panel at a time —
+tap a tab to open it, tap it again (or the ✕ in the panel) to close, leaving the 3D view
+unobstructed by default. Works the same way on desktop and mobile.
 
 ## Status
 
