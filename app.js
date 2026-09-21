@@ -5,6 +5,7 @@
 
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 const METERS_PER_DEG_LAT = 111320;
 
@@ -25,7 +26,16 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
 document.getElementById("app").appendChild(renderer.domElement);
+
+// A generated (non-photo) environment map so PBR materials get realistic-looking
+// reflections/specular response instead of the flat, shadeless look of ambient-only
+// lighting -- the single biggest lever toward "photoreal" without a real HDRI asset.
+const pmremGenerator = new THREE.PMREMGenerator(renderer);
+scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 10, 0);
@@ -173,11 +183,44 @@ const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
 const discGeo = new THREE.CylinderGeometry(1.1, 1.1, 0.18, 24);
-const discMat = new THREE.MeshStandardMaterial({ color: 0xffb703, metalness: 0.1, roughness: 0.35 });
+const discMat = new THREE.MeshPhysicalMaterial({
+  color: 0xffb703,
+  metalness: 0.05,
+  roughness: 0.22,
+  clearcoat: 0.6,
+  clearcoatRoughness: 0.25,
+});
 const discMesh = new THREE.Mesh(discGeo, discMat);
 discMesh.castShadow = true;
 discMesh.visible = false;
+
+// Two-tone rim, like a real driver's colored edge band -- also makes the spin read
+// much more clearly than a flat single-color disc would.
+const discRim = new THREE.Mesh(
+  new THREE.TorusGeometry(1.08, 0.09, 10, 28),
+  new THREE.MeshPhysicalMaterial({ color: 0xff5a1f, metalness: 0.05, roughness: 0.3, clearcoat: 0.5 }),
+);
+discRim.rotation.x = Math.PI / 2;
+discMesh.add(discRim);
 scene.add(discMesh);
+
+// A short trail of fading ghost copies behind the disc during a throw, to sell the
+// speed/spin at a glance -- cheap stand-in for real motion blur.
+const DISC_TRAIL_LEN = 5;
+const discTrailMeshes = Array.from({ length: DISC_TRAIL_LEN }, (_, i) => {
+  const m = new THREE.Mesh(discGeo, discMat.clone());
+  m.material.transparent = true;
+  m.material.opacity = 0.3 * (1 - i / DISC_TRAIL_LEN);
+  m.visible = false;
+  scene.add(m);
+  return m;
+});
+let discTrail = [];
+
+function hideDiscTrail() {
+  discTrail = [];
+  discTrailMeshes.forEach((m) => (m.visible = false));
+}
 
 function colorFor(kind) {
   if (kind === "tee") return 0x2ecc71;
@@ -469,6 +512,11 @@ document.getElementById("fly-btn").onclick = () => {
   flying = true;
   flyIndex = 0;
   flyElapsed = 0;
+  // OrbitControls' minDistance (15) would otherwise clamp the tight chase camera used
+  // during throws back out to 15 units, since it always adjusts camera.position to sit
+  // on the controls.target sphere. Driving the camera by hand during flight (see
+  // animate()) avoids that entirely, so disable input for the duration.
+  controls.enabled = false;
 };
 
 function updateWalk(t, leg) {
@@ -477,7 +525,7 @@ function updateWalk(t, leg) {
   const cz = from.z + (to.z - from.z) * t;
   const cy = Math.max(from.y, to.y) + 25;
   camera.position.set(cx, cy, cz + 35);
-  controls.target.set(cx, Math.max(from.y, to.y), cz);
+  camera.lookAt(cx, Math.max(from.y, to.y), cz);
 }
 
 function updatePause(t, leg, dt) {
@@ -490,11 +538,12 @@ function updatePause(t, leg, dt) {
 
   // Hold behind the tee looking down the fairway, like a player lining up the throw.
   camera.position.set(from.x - dirX * 6, from.y + 3.5, from.z - dirZ * 6);
-  controls.target.set(from.x + dirX * 10, from.y + 2, from.z + dirZ * 10);
+  camera.lookAt(from.x + dirX * 10, from.y + 2, from.z + dirZ * 10);
 
   discMesh.visible = true;
   discMesh.position.set(from.x, from.y + 1.1, from.z);
   discMesh.rotation.y += dt * 3; // idle wobble while held, not yet thrown
+  hideDiscTrail();
 }
 
 function discPositionAt(leg, t) {
@@ -526,6 +575,20 @@ function updateThrow(t, leg, dt) {
   discMesh.rotation.y += dt * 30; // spin
   discMesh.rotation.z = THREE.MathUtils.lerp(-0.05, 0.05, t); // slight settle wobble
 
+  discTrail.push({ x: p0.x, y: p0.y, z: p0.z, rotY: discMesh.rotation.y });
+  if (discTrail.length > 24) discTrail.shift();
+  discTrailMeshes.forEach((m, i) => {
+    const idx = discTrail.length - 1 - (i + 1) * 3;
+    if (idx >= 0) {
+      const s = discTrail[idx];
+      m.position.set(s.x, s.y, s.z);
+      m.rotation.y = s.rotY;
+      m.visible = true;
+    } else {
+      m.visible = false;
+    }
+  });
+
   // Tangent of the actual (curved) flight path, via a small lookahead sample -- using the
   // straight tee->basket direction here would point the chase camera along the wrong line
   // once the turn/fade curve pulls the disc off it, which is what made the camera seem to
@@ -538,11 +601,19 @@ function updateThrow(t, leg, dt) {
   fx /= flen;
   fz /= flen;
 
-  const chaseDist = 14;
-  const chaseHeight = 6;
+  // Tight, low, GoPro-behind-the-disc framing. This is much closer than OrbitControls'
+  // minDistance (15) would allow, which is exactly why flight bypasses it (see
+  // animate() and the fly-btn handler) and drives the camera by hand instead.
+  const chaseDist = 7;
+  const chaseHeight = 2.2;
   camera.position.set(p0.x - fx * chaseDist, p0.y + chaseHeight, p0.z - fz * chaseDist);
   // Look past the disc, toward where it's headed, not at the disc itself.
-  controls.target.set(p0.x + fx * 8, p0.y, p0.z + fz * 8);
+  camera.lookAt(p0.x + fx * 10, p0.y + 0.3, p0.z + fz * 10);
+
+  // A brief wide-FOV "whoosh" at release, settling back down as the disc arrives --
+  // a cheap but effective cinematic speed cue.
+  camera.fov = THREE.MathUtils.lerp(64, 52, t);
+  camera.updateProjectionMatrix();
 }
 
 function updateFlight(dt) {
@@ -557,6 +628,7 @@ function updateFlight(dt) {
     updatePause(t, leg, dt);
   } else {
     discMesh.visible = false;
+    hideDiscTrail();
     updateWalk(t, leg);
   }
 
@@ -566,6 +638,13 @@ function updateFlight(dt) {
     if (flyIndex >= flyLegs.length) {
       flying = false;
       discMesh.visible = false;
+      hideDiscTrail();
+      camera.fov = 55;
+      camera.updateProjectionMatrix();
+      // Hand orientation back to OrbitControls from wherever the flight left the camera,
+      // looking roughly at the point the last leg ended on.
+      controls.target.set(leg.to.x, leg.to.y + 1, leg.to.z);
+      controls.enabled = true;
     }
   }
 }
@@ -577,7 +656,10 @@ function animate() {
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
   updateFlight(dt);
-  controls.update();
+  // While flying, the camera is driven by hand (see updateThrow/updatePause/updateWalk)
+  // to get a much closer chase view than OrbitControls' minDistance would otherwise
+  // allow. Calling controls.update() here would fight that every frame.
+  if (!flying) controls.update();
   renderer.render(scene, camera);
 }
 
