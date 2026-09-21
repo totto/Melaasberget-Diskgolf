@@ -918,27 +918,39 @@ renderScorecard();
 // ---------- PWA / mobile ----------
 
 if ("serviceWorker" in navigator) {
-  addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch(() => {
-      // Offline support just won't be available -- the app still works online.
-    });
+  // Register immediately rather than waiting for `load` -- this app decodes 42
+  // embedded satellite tiles on load, which delays that event, and Chrome's install
+  // criteria need an active, controlling service worker. Registering as soon as
+  // possible (module scripts already run after DOM parsing) gives it the best chance
+  // of being active by the time a user tries "Add to Home Screen".
+  navigator.serviceWorker.register("./sw.js").catch(() => {
+    // Offline support / installability just won't be available -- the app still works online.
   });
 }
 
-function wireMobileToggle(toggleId, panelId) {
+const isCoarseOrNarrow = () => matchMedia("(max-width: 700px), (pointer: coarse)").matches;
+
+function setPanelCollapsed(panelId, toggleId, collapsed) {
+  const panel = document.getElementById(panelId);
+  const btn = document.getElementById(toggleId);
+  if (panel) panel.classList.toggle("collapsed", collapsed);
+  if (btn) btn.textContent = collapsed ? "+" : "−";
+}
+
+function wireMobileToggle(toggleId, panelId, otherPanelId, otherToggleId) {
   const btn = document.getElementById(toggleId);
   const panel = document.getElementById(panelId);
   if (!btn || !panel) return;
   // Phones/touch devices start collapsed so the 3D view isn't immediately covered by
   // two full-height panels; desktop keeps the previous always-open behavior.
-  if (matchMedia("(max-width: 700px), (pointer: coarse)").matches) {
-    panel.classList.add("collapsed");
-    btn.textContent = "+";
-  }
+  if (isCoarseOrNarrow()) setPanelCollapsed(panelId, toggleId, true);
   btn.onclick = () => {
-    const collapsed = panel.classList.toggle("collapsed");
-    btn.textContent = collapsed ? "+" : "−";
+    const collapsed = panel.classList.contains("collapsed");
+    setPanelCollapsed(panelId, toggleId, !collapsed);
+    // On a narrow screen both panels are full-width and stacked -- opening one while
+    // the other is also open would still overlap it, so close the other automatically.
+    if (collapsed && isCoarseOrNarrow()) setPanelCollapsed(otherPanelId, otherToggleId, true);
   };
 }
-wireMobileToggle("panel-toggle", "panel");
-wireMobileToggle("scorecard-toggle", "scorecard");
+wireMobileToggle("panel-toggle", "panel", "scorecard", "scorecard-toggle");
+wireMobileToggle("scorecard-toggle", "scorecard", "panel", "panel-toggle");

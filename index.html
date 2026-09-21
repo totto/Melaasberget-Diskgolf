@@ -115,7 +115,13 @@
     .remove-player-btn { min-height: 32px; min-width: 32px; font-size: 15px; }
     #player-name-input, .score-input, #export-output { font-size: 16px; }
     .score-input { width: 34px; padding: 6px 2px; }
-    #panel, #scorecard { width: calc(100vw - 24px); }
+    /* #panel and #scorecard were each set to nearly-full viewport width but stayed
+       anchored to their own top:12px -- on desktop's wide viewport that never
+       collided (300px/340px fixed widths, opposite sides, plenty of gap), but full-
+       width on a phone put both panels' headers at the exact same position, stacked
+       directly on top of each other. Stack them vertically instead. */
+    #panel, #scorecard { width: calc(100vw - 24px); left: 12px; right: auto; }
+    #scorecard { top: 64px; }
     #hole-hud { font-size: 13px; padding: 6px 12px; }
     #debug-hud { top: 52px; font-size: 10px; }
   }
