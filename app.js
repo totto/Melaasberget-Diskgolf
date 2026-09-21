@@ -702,6 +702,13 @@ function updateHud(hole) {
   }
 }
 
+function updateDebugHud(leg, t) {
+  const el = document.getElementById("debug-hud");
+  if (!el) return;
+  el.textContent = `leg ${flyIndex + 1}/${flyLegs.length} · ${leg.type} · ${Math.round(t * 100)}% · disc visible: ${discMesh.visible}`;
+  el.style.display = "block";
+}
+
 function updateFlight(dt) {
   if (!flying || flyLegs.length === 0) return;
   const leg = flyLegs[flyIndex];
@@ -718,6 +725,7 @@ function updateFlight(dt) {
     hideDiscTrail();
     updateWalk(t, leg);
   }
+  updateDebugHud(leg, t);
 
   if (t >= 1) {
     flyElapsed = 0;
@@ -727,6 +735,8 @@ function updateFlight(dt) {
       discMesh.visible = false;
       hideDiscTrail();
       updateHud(null);
+      const dbgEl = document.getElementById("debug-hud");
+      if (dbgEl) dbgEl.style.display = "none";
       camera.fov = 55;
       camera.updateProjectionMatrix();
       // Hand orientation back to OrbitControls from wherever the flight left the camera,

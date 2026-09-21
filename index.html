@@ -36,6 +36,11 @@
     letter-spacing: 0.02em; padding: 8px 18px; border-radius: 8px; z-index: 10;
     box-shadow: 0 4px 16px rgba(0,0,0,0.35);
   }
+  #debug-hud {
+    position: fixed; top: 60px; left: 50%; transform: translateX(-50%); display: none;
+    background: rgba(0,0,0,0.6); color: #ffd166; font-size: 12px; font-family: ui-monospace, monospace;
+    padding: 4px 10px; border-radius: 6px; z-index: 10;
+  }
   .status { display: block; font-size: 11px; color: #bbb; margin-bottom: 4px; }
   #hint { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.12); color: #ffd166; font-size: 12px; min-height: 16px; }
   #actions { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
@@ -57,6 +62,7 @@
 <div id="loading">Loading satellite imagery… 0/0</div>
 <div id="app"></div>
 <div id="hole-hud"></div>
+<div id="debug-hud"></div>
 
 <div id="panel">
   <h1>Melåsberget disc golf — course builder</h1>
