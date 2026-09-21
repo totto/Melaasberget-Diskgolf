@@ -27,9 +27,11 @@ real satellite imagery, click-to-place holes.
    "Place basket" for each of the 4 holes, then click on the terrain where that point actually is.
 4. "Copy placements" exports all placed points as JSON (lat/lon/elevation — durable across
    rebuilds, not tied to this specific Three.js scene).
-5. "Preview flythrough" walks start → hole 1 tee → hole 1 basket → hole 2 tee → ... in order.
-   Tee-to-basket legs are simulated as an actual disc throw (a spinning disc flies an arced,
-   turn-then-fade path from tee to basket with a chase camera); other legs are a walking hop.
+5. "Preview flythrough" auto-plays the whole course in order: start → hole 1 tee → hole 1 basket →
+   hole 2 tee → ... At each tee it pauses briefly (camera lines up the shot, disc held ready),
+   then throws — a spinning disc flies an arced, turn-then-fade path to the basket with a chase
+   camera. Everything else (walking between a basket and the next tee) is a walking hop. No
+   further clicks needed once it starts; it runs straight through to the last hole.
 
 ## Regenerating the data
 

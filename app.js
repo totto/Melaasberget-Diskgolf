@@ -366,6 +366,10 @@ function buildLegs(seq) {
     const b = seq[i + 1];
     const isThrow = a.kind === "tee" && b.kind === "basket" && a.hole === b.hole;
     const dist = Math.hypot(b.point.x - a.point.x, b.point.z - a.point.z);
+    if (isThrow) {
+      // Brief "set up the shot" beat at the tee before the disc actually launches.
+      legs.push({ type: "pause", from: a.point, to: b.point, duration: 0.9 });
+    }
     legs.push({
       type: isThrow ? "throw" : "walk",
       from: a.point,
@@ -400,6 +404,23 @@ function updateWalk(t, leg) {
   const cy = Math.max(from.y, to.y) + 25;
   camera.position.set(cx, cy, cz + 35);
   controls.target.set(cx, Math.max(from.y, to.y), cz);
+}
+
+function updatePause(t, leg, dt) {
+  const { from, to } = leg;
+  const dx = to.x - from.x;
+  const dz = to.z - from.z;
+  const dist = Math.hypot(dx, dz) || 1;
+  const dirX = dx / dist;
+  const dirZ = dz / dist;
+
+  // Hold behind the tee looking down the fairway, like a player lining up the throw.
+  camera.position.set(from.x - dirX * 6, from.y + 3.5, from.z - dirZ * 6);
+  controls.target.set(from.x + dirX * 10, from.y + 2, from.z + dirZ * 10);
+
+  discMesh.visible = true;
+  discMesh.position.set(from.x, from.y + 1.1, from.z);
+  discMesh.rotation.y += dt * 3; // idle wobble while held, not yet thrown
 }
 
 function updateThrow(t, leg, dt) {
@@ -442,6 +463,8 @@ function updateFlight(dt) {
 
   if (leg.type === "throw") {
     updateThrow(t, leg, dt);
+  } else if (leg.type === "pause") {
+    updatePause(t, leg, dt);
   } else {
     discMesh.visible = false;
     updateWalk(t, leg);
