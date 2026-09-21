@@ -33,8 +33,8 @@
     background: none; border: none; color: #fff; font-size: 18px; line-height: 1; cursor: pointer;
     padding: 4px 6px; flex-shrink: 0;
   }
-  #panel.collapsed .panel-body, #scorecard.collapsed .panel-body { display: none; }
-  #panel.collapsed, #scorecard.collapsed { padding-bottom: 10px; }
+  #panel.collapsed .panel-body, #scorecard.collapsed .panel-body, #gallery.collapsed .panel-body { display: none; }
+  #panel.collapsed, #scorecard.collapsed, #gallery.collapsed { padding-bottom: 10px; }
   .hole-row { border-top: 1px solid rgba(255,255,255,0.12); padding: 8px 0; }
   .hole-row strong { display: block; margin-bottom: 6px; }
   .place-btn {
@@ -104,6 +104,58 @@
     background: #4a6fa5; color: #fff; font-weight: 600;
   }
   #clear-scores-btn { background: #7a3b3b; }
+  #funstats { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.12); font-size: 12px; }
+  #fun-leader { color: #ffd166; font-weight: 600; min-height: 15px; }
+  #fun-highlights { color: #eee; margin-top: 4px; min-height: 15px; }
+  #fun-records { color: #9ab; margin-top: 4px; line-height: 1.5; }
+  #save-round {
+    margin-top: 8px; width: 100%; padding: 7px; font-size: 12px; font-weight: 600;
+    background: rgba(255,255,255,0.12); color: #eee; border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px; cursor: pointer;
+  }
+
+  #gallery {
+    position: fixed; right: 12px; bottom: 12px; width: 280px; max-width: calc(100vw - 24px);
+    max-height: 60vh; overflow-y: auto; background: rgba(20, 24, 20, 0.82); color: #eee;
+    border-radius: 10px; padding: 14px; font-size: 12px; z-index: 10;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  #gallery h2 { font-size: 14px; margin: 0; }
+  #gallery .panel-body { margin-top: 8px; }
+  .gallery-add { display: flex; gap: 6px; margin-bottom: 8px; }
+  .photo-btn {
+    flex: 1; display: block; text-align: center; padding: 8px; border-radius: 6px;
+    background: #2ecc71; color: #10241a; font-weight: 600; cursor: pointer;
+  }
+  .photo-btn.busy { opacity: 0.5; pointer-events: none; }
+  #photo-hole { background: #0d1117; color: #eee; border: 1px solid #333; border-radius: 6px; padding: 6px; }
+  #photo-caption {
+    width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 6px; font-size: 12px;
+    background: #0d1117; color: #eee; border: 1px solid #333; border-radius: 6px;
+  }
+  #gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-height: 32vh; overflow-y: auto; }
+  .gallery-thumb {
+    position: relative; aspect-ratio: 1; background-size: cover; background-position: center;
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 0; cursor: pointer;
+  }
+  .thumb-hole {
+    position: absolute; top: 3px; left: 3px; background: #ff7f27; color: #201200;
+    font-size: 10px; font-weight: 700; border-radius: 5px; padding: 1px 4px;
+  }
+  #gallery-empty { color: #9ab; font-size: 12px; }
+
+  #lightbox {
+    position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,0.92);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; padding: 16px;
+  }
+  #lightbox[hidden] { display: none; }
+  #lightbox-img { max-width: 100%; max-height: 75vh; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+  #lightbox-meta { color: #eee; font-size: 13px; text-align: center; }
+  .lightbox-actions { display: flex; gap: 10px; }
+  .lightbox-actions button { padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+  #lightbox-delete { background: #7a3b3b; color: #fff; }
+  #lightbox-close { background: #4a6fa5; color: #fff; }
 
   /* Touch/mobile: bigger tap targets, and >=16px inputs so iOS Safari doesn't
      auto-zoom on focus. Panels default to collapsed on small screens (see app.js)
@@ -124,6 +176,12 @@
     #scorecard { top: 64px; }
     #hole-hud { font-size: 13px; padding: 6px 12px; }
     #debug-hud { top: 52px; font-size: 10px; }
+    /* #gallery is bottom-anchored (unlike panel/scorecard above), so it doesn't need
+       to join that top-down stack -- but going full-width here would still cover
+       #controls-help, which sits in the same bottom-left corner. */
+    #gallery { left: 12px; right: 12px; width: auto; }
+    #controls-help { display: none; }
+    .photo-btn, #lightbox-delete, #lightbox-close { min-height: 40px; }
   }
 </style>
 </head>
@@ -168,6 +226,38 @@
       <button id="add-player-btn">Add player</button>
       <button id="clear-scores-btn">Clear scores</button>
     </div>
+    <div id="funstats">
+      <div id="fun-leader"></div>
+      <div id="fun-highlights"></div>
+      <div id="fun-records"></div>
+      <button id="save-round">Finish round</button>
+    </div>
+  </div>
+</div>
+
+<div id="gallery">
+  <div class="panel-header">
+    <h2>Photos</h2>
+    <button class="panel-toggle" id="gallery-toggle" aria-label="Toggle photos">−</button>
+  </div>
+  <div class="panel-body" id="gallery-panel-body">
+    <div class="gallery-add">
+      <label class="photo-btn" for="photo-input">Add photo</label>
+      <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
+      <select id="photo-hole"></select>
+    </div>
+    <input type="text" id="photo-caption" placeholder="Caption (optional)" maxlength="80">
+    <div id="gallery-grid"></div>
+    <div id="gallery-empty">No photos yet</div>
+  </div>
+</div>
+
+<div id="lightbox" hidden>
+  <img id="lightbox-img" alt="Course photo">
+  <div id="lightbox-meta"></div>
+  <div class="lightbox-actions">
+    <button id="lightbox-delete">Delete</button>
+    <button id="lightbox-close">Close</button>
   </div>
 </div>
 

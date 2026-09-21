@@ -35,6 +35,14 @@ terrain, real satellite imagery, click-to-place holes. 7 holes: 1-4 head out, 5-
    then throws — a spinning disc flies an arced, turn-then-fade path to the basket with a chase
    camera. Everything else (walking between a basket and the next tee) is a walking hop. No
    further clicks needed once it starts; it runs straight through to the last hole.
+6. The **Photos** panel lets you add a photo (opens the phone camera directly, or a file picker
+   on desktop), optionally tag it to a hole and caption it. Stored in IndexedDB (not
+   localStorage — photos are too big for that), fully offline, never uploaded anywhere. Tap a
+   thumbnail to view full-size / delete.
+7. The scorecard has a "fun" strip under the table: a live leader (👑), an ace/eagle/birdie
+   highlight feed, and per-hole course records pulled from past rounds. "Finish round" archives
+   the current scores to a round history (used for those records) and offers to clear the card
+   for a new round.
 
 ## Regenerating the data
 
@@ -63,5 +71,7 @@ collapsed (tap the − / + in each panel's header to toggle) so the 3D view isn'
 Terrain and satellite alignment confirmed working in-browser (farmhouse, second building, and
 patio all recognizable in the right places relative to the real slopes). Holes 1-4 (start, tees,
 baskets) hardcoded to real measured positions; holes 5-7 (the way back) have placeholder
-positions pending a real walkthrough. A scorecard panel tracks players and strokes per hole,
-persisted to localStorage. Mobile-friendly and installable as a PWA.
+positions pending a real walkthrough. A scorecard panel tracks players, strokes, and some "fun"
+stats (leader, highlights, course records, round history), persisted to localStorage. A Photos
+panel stores camera/gallery photos in IndexedDB. Mobile-friendly and installable as a PWA.
+(Photo gallery and scorecard fun-stats designed and implemented with Claude Fable 5.)

@@ -880,6 +880,7 @@ function renderScorecard() {
         saveScores();
         updateRowTotals(pi); // update this row's totals in place -- rebuilding the
         // whole table here would blow away focus mid-keystroke on the input.
+        updateFunStats();
       };
     });
     row.querySelector(".remove-player-btn").onclick = () => {
@@ -890,6 +891,7 @@ function renderScorecard() {
 
     updateRowTotals(pi);
   });
+  updateFunStats();
 }
 
 document.getElementById("add-player-btn").onclick = () => {
@@ -912,8 +914,280 @@ document.getElementById("clear-scores-btn").onclick = () => {
   renderScorecard();
 };
 
+// ---------- Scorecard fun ----------
+// Casual, low-stakes additions on top of the plain scorecard: a live leader line, an
+// ace/eagle/birdie highlight strip, and per-hole "course records" pulled from both the
+// current round and every round saved via "Finish round".
+
+const ROUNDS_KEY = "melasberget-diskgolf-rounds-v1";
+
+function readRounds() {
+  try {
+    return JSON.parse(localStorage.getItem(ROUNDS_KEY) || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+
+function holeScore(p, h) {
+  return Number(p.scores && p.scores[h]) || 0;
+}
+
+function scoreEmoji(strokes, par) {
+  if (strokes === 1 && par >= 2) return "\u{1F31F}"; // ace
+  if (strokes - par <= -2) return "\u{1F985}"; // eagle
+  if (strokes - par === -1) return "\u{1F426}"; // birdie
+  return "";
+}
+
+function updateFunStats() {
+  const leaderEl = document.getElementById("fun-leader");
+  if (!leaderEl) return;
+
+  let best = null;
+  players.forEach((p) => {
+    let diff = 0;
+    let played = 0;
+    HOLES.forEach((h) => {
+      const s = holeScore(p, h);
+      if (s > 0) {
+        diff += s - PARS[h];
+        played++;
+      }
+    });
+    if (!played) return;
+    if (!best || diff < best.diff) best = { names: [p.name], diff };
+    else if (diff === best.diff) best.names.push(p.name);
+  });
+  leaderEl.textContent = best
+    ? `\u{1F451} ${best.names.join(" & ")} (${best.diff === 0 ? "E" : best.diff > 0 ? `+${best.diff}` : best.diff})`
+    : "";
+
+  const notes = [];
+  players.forEach((p) => {
+    HOLES.forEach((h) => {
+      const s = holeScore(p, h);
+      const emoji = s && scoreEmoji(s, PARS[h]);
+      if (emoji) notes.push(`${emoji} ${p.name} H${h}`);
+    });
+  });
+  document.getElementById("fun-highlights").textContent = notes.join("  ");
+
+  const bestHole = {};
+  const consider = (name, h, s) => {
+    if (s > 0 && (!bestHole[h] || s < bestHole[h].s)) bestHole[h] = { s, name };
+  };
+  readRounds().forEach((r) => (r.players || []).forEach((p) => HOLES.forEach((h) => consider(p.name, h, holeScore(p, h)))));
+  players.forEach((p) => HOLES.forEach((h) => consider(p.name, h, holeScore(p, h))));
+  const recs = HOLES.filter((h) => bestHole[h]).map((h) => `H${h}: ${bestHole[h].s} (${bestHole[h].name})`);
+  document.getElementById("fun-records").textContent = recs.length ? `\u{1F3C6} ${recs.join(" · ")}` : "";
+}
+
+function finishRound() {
+  if (!players.some((p) => HOLES.some((h) => holeScore(p, h) > 0))) {
+    alert("No scores to save yet.");
+    return;
+  }
+  const rounds = readRounds();
+  rounds.push({ date: new Date().toISOString(), players: JSON.parse(JSON.stringify(players)) });
+  while (rounds.length > 100) rounds.shift();
+  try {
+    localStorage.setItem(ROUNDS_KEY, JSON.stringify(rounds));
+  } catch (e) {
+    // Private browsing / storage disabled -- the round just won't be remembered.
+  }
+  if (confirm("Round saved. Clear scores for a new round?")) {
+    players = [];
+    saveScores();
+    renderScorecard();
+  }
+  updateFunStats();
+}
+document.getElementById("save-round").onclick = finishRound;
+
 loadScores();
 renderScorecard();
+
+// ---------- Photo gallery ----------
+// Photos are stored in IndexedDB, not localStorage -- localStorage's ~5-10MB quota
+// would fill up fast with images, while IndexedDB comfortably holds many photos and
+// (like everything else in this app) works fully offline.
+
+const PHOTO_DB = "melasberget-diskgolf-photos";
+const PHOTO_STORE = "photos";
+
+function openPhotoDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(PHOTO_DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(PHOTO_STORE, { keyPath: "id", autoIncrement: true });
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function photoTx(mode, fn) {
+  return openPhotoDb().then(
+    (db) =>
+      new Promise((resolve, reject) => {
+        const tx = db.transaction(PHOTO_STORE, mode);
+        const req = fn(tx.objectStore(PHOTO_STORE));
+        tx.oncomplete = () => {
+          db.close();
+          resolve(req && req.result);
+        };
+        tx.onerror = () => {
+          db.close();
+          reject(tx.error);
+        };
+        tx.onabort = () => {
+          db.close();
+          reject(tx.error);
+        };
+      }),
+  );
+}
+
+async function decodeImage(file) {
+  if ("createImageBitmap" in window) {
+    try {
+      // "from-image" applies the photo's EXIF rotation so phone photos taken in
+      // portrait don't get stored sideways.
+      return await createImageBitmap(file, { imageOrientation: "from-image" });
+    } catch (e) {
+      // Fall through to the <img> decode path below.
+    }
+  }
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("could not decode image"));
+    };
+    img.src = url;
+  });
+}
+
+function scaleToBlob(img, maxDim, quality) {
+  const w = img.width;
+  const h = img.height;
+  const scale = Math.min(1, maxDim / Math.max(w, h));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(w * scale));
+  canvas.height = Math.max(1, Math.round(h * scale));
+  canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode failed"))), "image/jpeg", quality),
+  );
+}
+
+async function addPhoto(file, hole, caption) {
+  const img = await decodeImage(file);
+  // Store one downscaled "full" copy plus a small thumbnail -- never the raw,
+  // multi-megabyte camera original, or IndexedDB usage would balloon fast.
+  const [blob, thumb] = await Promise.all([scaleToBlob(img, 1600, 0.85), scaleToBlob(img, 240, 0.7)]);
+  if (img.close) img.close(); // release ImageBitmap memory, if that's what decodeImage returned
+  await photoTx("readwrite", (s) =>
+    s.add({ ts: Date.now(), hole: hole || null, caption: caption || "", blob, thumb }),
+  );
+  await renderGallery();
+}
+
+let galleryUrls = [];
+async function renderGallery() {
+  const grid = document.getElementById("gallery-grid");
+  if (!grid) return;
+  const photos = (await photoTx("readonly", (s) => s.getAll())) || [];
+  galleryUrls.forEach((u) => URL.revokeObjectURL(u));
+  galleryUrls = [];
+  grid.innerHTML = "";
+  document.getElementById("gallery-empty").hidden = photos.length > 0;
+  photos.reverse().forEach((p) => {
+    const url = URL.createObjectURL(p.thumb);
+    galleryUrls.push(url);
+    const btn = document.createElement("button");
+    btn.className = "gallery-thumb";
+    btn.style.backgroundImage = `url(${url})`;
+    btn.setAttribute("aria-label", p.caption || "Photo");
+    if (p.hole) {
+      const badge = document.createElement("span");
+      badge.className = "thumb-hole";
+      badge.textContent = p.hole;
+      btn.appendChild(badge);
+    }
+    btn.onclick = () => openLightbox(p.id);
+    grid.appendChild(btn);
+  });
+}
+
+let lightboxUrl = null;
+let lightboxId = null;
+async function openLightbox(id) {
+  const p = await photoTx("readonly", (s) => s.get(id));
+  if (!p) return;
+  lightboxId = id;
+  if (lightboxUrl) URL.revokeObjectURL(lightboxUrl);
+  lightboxUrl = URL.createObjectURL(p.blob);
+  document.getElementById("lightbox-img").src = lightboxUrl;
+  const parts = [];
+  if (p.hole) parts.push(`Hole ${p.hole}`);
+  parts.push(new Date(p.ts).toLocaleString());
+  if (p.caption) parts.push(p.caption);
+  document.getElementById("lightbox-meta").textContent = parts.join(" — ");
+  document.getElementById("lightbox").hidden = false;
+}
+
+function closeLightbox() {
+  document.getElementById("lightbox").hidden = true;
+  if (lightboxUrl) {
+    URL.revokeObjectURL(lightboxUrl);
+    lightboxUrl = null;
+  }
+  lightboxId = null;
+}
+
+function initGallery() {
+  const holeSel = document.getElementById("photo-hole");
+  holeSel.innerHTML =
+    `<option value="">No hole</option>` + HOLES.map((h) => `<option value="${h}">Hole ${h}</option>`).join("");
+
+  const input = document.getElementById("photo-input");
+  input.addEventListener("change", async () => {
+    const file = input.files && input.files[0];
+    input.value = "";
+    if (!file) return;
+    const label = document.querySelector('label[for="photo-input"]');
+    label.classList.add("busy");
+    try {
+      await addPhoto(file, Number(holeSel.value) || null, document.getElementById("photo-caption").value.trim());
+      document.getElementById("photo-caption").value = "";
+    } catch (e) {
+      alert("Could not save photo: " + (e && e.message ? e.message : e));
+    } finally {
+      label.classList.remove("busy");
+    }
+  });
+
+  document.getElementById("lightbox-close").onclick = closeLightbox;
+  document.getElementById("lightbox").addEventListener("click", (ev) => {
+    if (ev.target.id === "lightbox") closeLightbox();
+  });
+  document.getElementById("lightbox-delete").onclick = async () => {
+    if (lightboxId == null || !confirm("Delete this photo?")) return;
+    await photoTx("readwrite", (s) => s.delete(lightboxId));
+    closeLightbox();
+    renderGallery();
+  };
+
+  // Ask the browser not to evict the photo store under storage pressure.
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  renderGallery().catch(() => {});
+}
+initGallery();
 
 // ---------- PWA / mobile ----------
 
@@ -937,20 +1211,29 @@ function setPanelCollapsed(panelId, toggleId, collapsed) {
   if (btn) btn.textContent = collapsed ? "+" : "−";
 }
 
-function wireMobileToggle(toggleId, panelId, otherPanelId, otherToggleId) {
+const MOBILE_PANELS = [
+  { toggleId: "panel-toggle", panelId: "panel" },
+  { toggleId: "scorecard-toggle", panelId: "scorecard" },
+  { toggleId: "gallery-toggle", panelId: "gallery" },
+];
+
+function wireMobileToggle(toggleId, panelId) {
   const btn = document.getElementById(toggleId);
   const panel = document.getElementById(panelId);
   if (!btn || !panel) return;
   // Phones/touch devices start collapsed so the 3D view isn't immediately covered by
-  // two full-height panels; desktop keeps the previous always-open behavior.
+  // full-height panels; desktop keeps the previous always-open behavior.
   if (isCoarseOrNarrow()) setPanelCollapsed(panelId, toggleId, true);
   btn.onclick = () => {
     const collapsed = panel.classList.contains("collapsed");
     setPanelCollapsed(panelId, toggleId, !collapsed);
-    // On a narrow screen both panels are full-width and stacked -- opening one while
-    // the other is also open would still overlap it, so close the other automatically.
-    if (collapsed && isCoarseOrNarrow()) setPanelCollapsed(otherPanelId, otherToggleId, true);
+    // On a narrow screen panels are full-width -- opening one while another is also
+    // open would still overlap it, so close the others automatically.
+    if (collapsed && isCoarseOrNarrow()) {
+      MOBILE_PANELS.forEach((p) => {
+        if (p.panelId !== panelId) setPanelCollapsed(p.panelId, p.toggleId, true);
+      });
+    }
   };
 }
-wireMobileToggle("panel-toggle", "panel", "scorecard", "scorecard-toggle");
-wireMobileToggle("scorecard-toggle", "scorecard", "panel", "panel-toggle");
+MOBILE_PANELS.forEach((p) => wireMobileToggle(p.toggleId, p.panelId));
