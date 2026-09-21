@@ -172,8 +172,11 @@ Promise.all(TILES.tiles.map(loadTile)).then(() => {
 
 // ---------- Hole placement ----------
 
-const HOLES = [1, 2, 3, 4];
-const PARS = { 1: 1, 2: 3, 3: 2, 4: 2 };
+// Out-and-back: holes 1-4 head out, 5-7 play the way back. 5-7 have no default
+// placements (or confirmed pars) yet -- place their tees/baskets via the UI once
+// measured, and update PARS below to match.
+const HOLES = [1, 2, 3, 4, 5, 6, 7];
+const PARS = { 1: 1, 2: 3, 3: 2, 4: 2, 5: 3, 6: 3, 7: 3 };
 const POINT_KINDS = ["tee", "basket"];
 const START_KEY = "start";
 const state = {};
@@ -777,3 +780,126 @@ addEventListener("resize", () => {
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
+
+// ---------- Scorecard ----------
+// players: [{ name, scores: { [holeNumber]: strokes|undefined } }], persisted separately
+// from placements so clearing one doesn't touch the other.
+
+const SCORES_KEY = "melasberget-diskgolf-scores-v1";
+let players = [];
+
+function loadScores() {
+  try {
+    players = JSON.parse(localStorage.getItem(SCORES_KEY) || "[]");
+  } catch (e) {
+    players = [];
+  }
+}
+
+function saveScores() {
+  try {
+    localStorage.setItem(SCORES_KEY, JSON.stringify(players));
+  } catch (e) {
+    // Private browsing / storage disabled -- scores just won't survive a reload.
+  }
+}
+
+function totalPar() {
+  return HOLES.reduce((sum, h) => sum + (PARS[h] || 0), 0);
+}
+
+function updateRowTotals(pi) {
+  const row = document.querySelector(`tr[data-player-row="${pi}"]`);
+  const p = players[pi];
+  if (!row || !p) return;
+  let total = 0;
+  let counted = 0;
+  HOLES.forEach((h) => {
+    const v = p.scores[h];
+    if (typeof v === "number" && !Number.isNaN(v)) {
+      total += v;
+      counted++;
+    }
+  });
+  const totalCell = row.querySelector(".total-cell");
+  const diffCell = row.querySelector(".diff-cell");
+  if (counted === 0) {
+    totalCell.textContent = "-";
+    diffCell.textContent = "-";
+  } else {
+    totalCell.textContent = total;
+    if (counted === HOLES.length) {
+      const diff = total - totalPar();
+      diffCell.textContent = diff === 0 ? "E" : diff > 0 ? `+${diff}` : `${diff}`;
+    } else {
+      diffCell.textContent = "…";
+    }
+  }
+}
+
+function renderScorecard() {
+  const header = document.getElementById("scorecard-header");
+  const body = document.getElementById("scorecard-body");
+  if (!header || !body) return;
+
+  header.innerHTML =
+    `<th>Player</th>` +
+    HOLES.map((h) => `<th>H${h}<span class="par-label">Par ${PARS[h]}</span></th>`).join("") +
+    `<th>Tot</th><th>+/-</th><th></th>`;
+
+  body.innerHTML = "";
+  players.forEach((p, pi) => {
+    const row = document.createElement("tr");
+    row.dataset.playerRow = pi;
+    const cells = HOLES.map((h) => {
+      const val = p.scores[h];
+      return `<td><input type="number" min="1" class="score-input" data-hole="${h}" value="${val ?? ""}"></td>`;
+    }).join("");
+    row.innerHTML =
+      `<td>${p.name}</td>${cells}<td class="total-cell">-</td><td class="diff-cell">-</td>` +
+      `<td><button class="remove-player-btn" title="Remove player">✕</button></td>`;
+    body.appendChild(row);
+
+    row.querySelectorAll(".score-input").forEach((input) => {
+      input.oninput = () => {
+        const h = Number(input.dataset.hole);
+        const v = input.value === "" ? undefined : Number(input.value);
+        if (v === undefined) delete p.scores[h];
+        else p.scores[h] = v;
+        saveScores();
+        updateRowTotals(pi); // update this row's totals in place -- rebuilding the
+        // whole table here would blow away focus mid-keystroke on the input.
+      };
+    });
+    row.querySelector(".remove-player-btn").onclick = () => {
+      players.splice(pi, 1);
+      saveScores();
+      renderScorecard();
+    };
+
+    updateRowTotals(pi);
+  });
+}
+
+document.getElementById("add-player-btn").onclick = () => {
+  const input = document.getElementById("player-name-input");
+  const name = input.value.trim();
+  if (!name) return;
+  players.push({ name, scores: {} });
+  input.value = "";
+  saveScores();
+  renderScorecard();
+};
+document.getElementById("player-name-input").addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter") document.getElementById("add-player-btn").click();
+});
+
+document.getElementById("clear-scores-btn").onclick = () => {
+  if (!confirm("Remove all players and scores?")) return;
+  players = [];
+  saveScores();
+  renderScorecard();
+};
+
+loadScores();
+renderScorecard();

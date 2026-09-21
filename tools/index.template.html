@@ -56,6 +56,38 @@
     position: fixed; bottom: 10px; left: 12px; color: #fff; font-size: 11px; opacity: 0.75;
     background: rgba(0,0,0,0.35); padding: 6px 10px; border-radius: 6px; z-index: 10;
   }
+  #scorecard {
+    position: fixed; top: 12px; right: 12px; width: 340px; max-width: calc(100vw - 24px);
+    max-height: 90vh; overflow-y: auto; background: rgba(20, 24, 20, 0.82); color: #eee;
+    border-radius: 10px; padding: 14px; font-size: 12px; z-index: 10;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  #scorecard h2 { font-size: 14px; margin: 0 0 8px; }
+  #scorecard-table-wrap { overflow-x: auto; }
+  #scorecard-table { border-collapse: collapse; width: 100%; }
+  #scorecard-table th, #scorecard-table td {
+    padding: 3px 5px; text-align: center; white-space: nowrap; border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  #scorecard-table th { font-weight: 600; color: #bbb; font-size: 10px; }
+  #scorecard-table th .par-label { display: block; color: #ffd166; font-weight: 400; }
+  #scorecard-table td:first-child, #scorecard-table th:first-child { text-align: left; }
+  .score-input {
+    width: 30px; background: #0d1117; color: #eee; border: 1px solid #333; border-radius: 4px;
+    text-align: center; font-size: 12px; padding: 2px;
+  }
+  .remove-player-btn {
+    background: none; border: none; color: #e06c75; cursor: pointer; font-size: 12px; padding: 0 2px;
+  }
+  #scorecard-actions { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
+  #player-name-input {
+    flex: 1; min-width: 90px; background: #0d1117; color: #eee; border: 1px solid #333;
+    border-radius: 6px; padding: 6px; font-size: 12px;
+  }
+  #scorecard-actions button {
+    font-size: 12px; padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer;
+    background: #4a6fa5; color: #fff; font-weight: 600;
+  }
+  #clear-scores-btn { background: #7a3b3b; }
 </style>
 </head>
 <body>
@@ -76,6 +108,21 @@
   <textarea id="export-output" readonly></textarea>
 </div>
 <div id="controls-help">Drag to orbit · scroll to zoom · right-drag to pan</div>
+
+<div id="scorecard">
+  <h2>Scorecard</h2>
+  <div id="scorecard-table-wrap">
+    <table id="scorecard-table">
+      <thead><tr id="scorecard-header"></tr></thead>
+      <tbody id="scorecard-body"></tbody>
+    </table>
+  </div>
+  <div id="scorecard-actions">
+    <input id="player-name-input" type="text" placeholder="Player name" maxlength="24">
+    <button id="add-player-btn">Add player</button>
+    <button id="clear-scores-btn">Clear scores</button>
+  </div>
+</div>
 
 <script type="importmap">
 {

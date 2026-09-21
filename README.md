@@ -1,7 +1,7 @@
 # Melåsberget Diskgolf — 3D course builder
 
-An interactive 3D map of the 4-hole disc golf course at Flotsvegen 5, 2416 Jømna — real terrain,
-real satellite imagery, click-to-place holes.
+An interactive 3D map of the out-and-back disc golf course at Flotsvegen 5, 2416 Jømna — real
+terrain, real satellite imagery, click-to-place holes. 7 holes: 1-4 head out, 5-7 play the way back.
 
 **Live**: https://totto.github.io/Melaasberget-Diskgolf/ (once GitHub Pages is enabled on this repo)
 
@@ -23,9 +23,10 @@ real satellite imagery, click-to-place holes.
    ```
    then open `http://localhost:8000/`. (Or just use the GitHub Pages URL above once it's live.)
 2. Orbit/zoom/pan to look around the real terrain.
-3. The course start (parking), all 4 tees, and all 4 baskets load pre-placed at their real
-   measured positions. Baskets are portable, so if one's been moved, click its button again
-   and click the new spot — it's saved to localStorage and sticks across reloads.
+3. The course start (parking) and holes 1-4 (tees + baskets) load pre-placed at their real
+   measured positions. Holes 5-7 (the way back) have no default yet — place their tees and
+   baskets via the UI once measured. Baskets are portable, so if one's been moved, click its
+   button again and click the new spot — it's saved to localStorage and sticks across reloads.
 4. "Copy placements" exports all placed points as JSON (lat/lon/elevation — durable across
    rebuilds, not tied to this specific Three.js scene).
 5. "Preview flythrough" auto-plays the whole course in order: start → hole 1 tee → hole 1 basket →
@@ -50,6 +51,6 @@ already has everything baked in.
 ## Status
 
 Terrain and satellite alignment confirmed working in-browser (farmhouse, second building, and
-patio all recognizable in the right places relative to the real slopes). Full course (start,
-4 tees, 4 baskets) hardcoded to real measured positions, with re-placements persisted to
-localStorage so they survive reloads.
+patio all recognizable in the right places relative to the real slopes). Holes 1-4 (start, tees,
+baskets) hardcoded to real measured positions; holes 5-7 (the way back) still need placing.
+A scorecard panel tracks players and strokes per hole, persisted to localStorage.
