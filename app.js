@@ -583,6 +583,25 @@ function updatePause(t, leg, dt) {
   hideDiscTrail();
 }
 
+// Bilinear-interpolated terrain height at a local (x, z), from the same elevation grid
+// the terrain mesh is built from -- mirrors buildTerrain's lat/lon -> grid-index mapping.
+function terrainElevationAt(x, z) {
+  const [lat, lon] = localToLatLon(x, z);
+  const fi = ((lat - bounds.latMin) / (bounds.latMax - bounds.latMin)) * (gridN - 1);
+  const fj = ((lon - bounds.lonMin) / (bounds.lonMax - bounds.lonMin)) * (gridN - 1);
+  const i0 = Math.max(0, Math.min(gridN - 2, Math.floor(fi)));
+  const j0 = Math.max(0, Math.min(gridN - 2, Math.floor(fj)));
+  const ti = Math.min(1, Math.max(0, fi - i0));
+  const tj = Math.min(1, Math.max(0, fj - j0));
+  const e00 = elevations[i0 * gridN + j0];
+  const e01 = elevations[i0 * gridN + j0 + 1];
+  const e10 = elevations[(i0 + 1) * gridN + j0];
+  const e11 = elevations[(i0 + 1) * gridN + j0 + 1];
+  const e0 = e00 + (e01 - e00) * tj;
+  const e1 = e10 + (e11 - e10) * tj;
+  return e0 + (e1 - e0) * ti - elevMin;
+}
+
 function discPositionAt(leg, t) {
   const { from, to } = leg;
   const dx = to.x - from.x;
@@ -600,7 +619,17 @@ function discPositionAt(leg, t) {
   const landY = to.y + 0.9;
   const x = from.x + dx * t + perpX * curve;
   const z = from.z + dz * t + perpZ * curve;
-  const y = releaseY + (landY - releaseY) * t + arc;
+  let y = releaseY + (landY - releaseY) * t + arc;
+
+  // The arc above only interpolates between the tee and basket heights -- on a hole
+  // where real terrain rises in between (this parcel has ~38m of relief), that put the
+  // disc's simulated flight path below the actual rendered ground for most of the
+  // throw, occluded by the hill, only re-emerging near the basket where the two
+  // heights happened to line back up. Clamp to a minimum clearance above the real
+  // terrain sampled directly under the disc.
+  const groundY = terrainElevationAt(x, z);
+  y = Math.max(y, groundY + 1.4);
+
   return { x, y, z };
 }
 
