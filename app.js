@@ -377,24 +377,62 @@ const DEFAULT_PLACEMENTS = {
   "4-tee": { lat: 60.827088779157016, lon: 11.721813950560279, elevation: 198.42329058793035 },
 };
 
+// Shared by defaults, localStorage restore, and manual clicks, so all three placement
+// paths (marker creation, state, status text) stay in sync automatically.
+function placePoint(key, lat, lon, elevation) {
+  const kind = key === START_KEY ? "start" : key.split("-")[1];
+  const [x, z] = latLonToLocal(lat, lon);
+  const y = elevation - elevMin;
+
+  if (markers[key]) scene.remove(markers[key]);
+  const marker = makeMarker(kind);
+  marker.position.set(x, y, z);
+  scene.add(marker);
+  markers[key] = marker;
+
+  state[key] = { x, y, z, lat, lon, elev: elevation };
+  const statusEl = document.getElementById(`status-${key}`);
+  if (statusEl) statusEl.textContent = `placed (${lat.toFixed(6)}, ${lon.toFixed(6)})`;
+}
+
+const STORAGE_KEY = "melasberget-diskgolf-placements-v1";
+
+function savePlacements() {
+  const out = {};
+  Object.keys(state).forEach((k) => {
+    out[k] = { lat: state[k].lat, lon: state[k].lon, elevation: state[k].elev };
+  });
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(out));
+  } catch (e) {
+    // Private browsing / storage disabled -- placements just won't survive a reload.
+  }
+}
+
+function loadSavedPlacements() {
+  let saved;
+  try {
+    saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+  } catch (e) {
+    saved = {};
+  }
+  Object.entries(saved).forEach(([key, { lat, lon, elevation }]) => {
+    placePoint(key, lat, lon, elevation);
+  });
+}
+
 function applyDefaultPlacements() {
   Object.entries(DEFAULT_PLACEMENTS).forEach(([key, { lat, lon, elevation }]) => {
-    const kind = key === START_KEY ? "start" : key.split("-")[1];
-    const [x, z] = latLonToLocal(lat, lon);
-    const y = elevation - elevMin;
-
-    const marker = makeMarker(kind);
-    marker.position.set(x, y, z);
-    scene.add(marker);
-    markers[key] = marker;
-
-    state[key] = { x, y, z, lat, lon, elev: elevation };
-    const statusEl = document.getElementById(`status-${key}`);
-    if (statusEl) statusEl.textContent = `placed (${lat.toFixed(6)}, ${lon.toFixed(6)})`;
+    placePoint(key, lat, lon, elevation);
   });
-  drawHolePaths();
 }
 applyDefaultPlacements();
+// Anything saved from a previous session (crucially, basket positions -- see
+// placePoint/STORAGE_KEY) overrides the hardcoded defaults above, since it reflects
+// the most recently placed real positions. Without this, every reload wiped baskets
+// back to "not placed" and the flythrough had no tee->basket legs to throw the disc on.
+loadSavedPlacements();
+drawHolePaths();
 
 function localToLatLon(x, z) {
   const lat = center.lat - z / METERS_PER_DEG_LAT;
@@ -414,17 +452,8 @@ renderer.domElement.addEventListener("click", (ev) => {
   const [lat, lon] = localToLatLon(p.x, p.z);
   const elev = p.y + elevMin;
 
-  if (markers[armedKey]) scene.remove(markers[armedKey]);
-  const kind = armedKey === START_KEY ? "start" : armedKey.split("-")[1];
-  const marker = makeMarker(kind);
-  marker.position.set(p.x, p.y, p.z);
-  scene.add(marker);
-  markers[armedKey] = marker;
-
-  state[armedKey] = { x: p.x, y: p.y, z: p.z, lat, lon, elev };
-  document.getElementById(`status-${armedKey}`).textContent =
-    `placed (${lat.toFixed(6)}, ${lon.toFixed(6)})`;
-
+  placePoint(armedKey, lat, lon, elev);
+  savePlacements();
   drawHolePaths();
 });
 
