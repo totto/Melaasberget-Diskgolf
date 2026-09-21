@@ -23,8 +23,10 @@ real satellite imagery, click-to-place holes.
    ```
    then open `http://localhost:8000/`. (Or just use the GitHub Pages URL above once it's live.)
 2. Orbit/zoom/pan to look around the real terrain.
-3. Click "Place start (parking)" for where the walkthrough should begin, and "Place tee" /
-   "Place basket" for each of the 4 holes, then click on the terrain where that point actually is.
+3. The course start (parking) and all 4 tee pads load pre-placed at their real measured
+   positions — click the corresponding button again to move one. Baskets aren't hardcoded
+   since they're portable and get moved between rounds; click "Place basket" for each hole
+   and click on the terrain where it actually is.
 4. "Copy placements" exports all placed points as JSON (lat/lon/elevation — durable across
    rebuilds, not tied to this specific Three.js scene).
 5. "Preview flythrough" auto-plays the whole course in order: start → hole 1 tee → hole 1 basket →
@@ -49,5 +51,6 @@ already has everything baked in.
 ## Status
 
 Terrain and satellite alignment confirmed working in-browser (farmhouse, second building, and
-patio all recognizable in the right places relative to the real slopes). Course start point and
-disc-simulated flythrough added; still need the actual tee/basket positions placed.
+patio all recognizable in the right places relative to the real slopes). Course start and all
+4 tees are hardcoded to their real measured positions; basket positions still need placing
+each round since the baskets are portable.

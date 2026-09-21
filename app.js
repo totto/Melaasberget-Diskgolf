@@ -278,6 +278,37 @@ function buildUI() {
 }
 buildUI();
 
+// Real measured positions for the fixed points (parking + tee pads). Baskets aren't
+// hardcoded because they're portable and get moved between rounds -- place those per
+// session via the UI. Loading these just runs them through the same placement path as
+// a manual click, so they're seed data, not read-only: click a button again to move one.
+const DEFAULT_PLACEMENTS = {
+  start: { lat: 60.82746012321331, lon: 11.721275733853467, elevation: 197.19862189521584 },
+  "1-tee": { lat: 60.82727870995245, lon: 11.720750744649953, elevation: 195.85749312012138 },
+  "2-tee": { lat: 60.82665352000554, lon: 11.72095956367916, elevation: 195.84659042335778 },
+  "3-tee": { lat: 60.82680736930721, lon: 11.721531234465367, elevation: 197.62694691183492 },
+  "4-tee": { lat: 60.826944833898814, lon: 11.72147335639348, elevation: 197.4362516054343 },
+};
+
+function applyDefaultPlacements() {
+  Object.entries(DEFAULT_PLACEMENTS).forEach(([key, { lat, lon, elevation }]) => {
+    const kind = key === START_KEY ? "start" : key.split("-")[1];
+    const [x, z] = latLonToLocal(lat, lon);
+    const y = elevation - elevMin;
+
+    const marker = makeMarker(kind);
+    marker.position.set(x, y, z);
+    scene.add(marker);
+    markers[key] = marker;
+
+    state[key] = { x, y, z, lat, lon, elev: elevation };
+    const statusEl = document.getElementById(`status-${key}`);
+    if (statusEl) statusEl.textContent = `placed (${lat.toFixed(6)}, ${lon.toFixed(6)})`;
+  });
+  drawHolePaths();
+}
+applyDefaultPlacements();
+
 function localToLatLon(x, z) {
   const lat = center.lat - z / METERS_PER_DEG_LAT;
   const lon = center.lon + x / metersPerDegLon(center.lat);
