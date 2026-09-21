@@ -124,7 +124,11 @@ function buildTerrain(texture) {
       const b = i * gridN + j + 1;
       const c = (i + 1) * gridN + j;
       const d = (i + 1) * gridN + j + 1;
-      indices.push(a, c, b, b, c, d);
+      // Winding order matters: (a,b,c)/(b,d,c) gives an upward-facing (+Y) normal for
+      // this grid's coordinate convention (X=east, Z=south). The previous (a,c,b)/(b,c,d)
+      // order produced downward-facing normals -- invisible from above with backface
+      // culling on, which is exactly the "no terrain" bug this comment is fixing.
+      indices.push(a, b, c, b, d, c);
     }
   }
 
@@ -133,7 +137,7 @@ function buildTerrain(texture) {
   geo.setIndex(indices);
   geo.computeVertexNormals();
 
-  const mat = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.95, metalness: 0.0 });
+  const mat = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.95, metalness: 0.0, side: THREE.DoubleSide });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.receiveShadow = true;
   mesh.castShadow = true;
