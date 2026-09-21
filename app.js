@@ -164,6 +164,7 @@ Promise.all(TILES.tiles.map(loadTile)).then(() => {
 
 const HOLES = [1, 2, 3, 4];
 const POINT_KINDS = ["tee", "basket"];
+const START_KEY = "start";
 const state = {};
 let armedKey = null;
 
@@ -171,7 +172,18 @@ const markers = {};
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-function colorFor(kind) { return kind === "tee" ? 0x2ecc71 : 0xff7f27; }
+const discGeo = new THREE.CylinderGeometry(1.1, 1.1, 0.18, 24);
+const discMat = new THREE.MeshStandardMaterial({ color: 0xffb703, metalness: 0.1, roughness: 0.35 });
+const discMesh = new THREE.Mesh(discGeo, discMat);
+discMesh.castShadow = true;
+discMesh.visible = false;
+scene.add(discMesh);
+
+function colorFor(kind) {
+  if (kind === "tee") return 0x2ecc71;
+  if (kind === "start") return 0x3498db;
+  return 0xff7f27;
+}
 
 function makeMarker(kind) {
   const group = new THREE.Group();
@@ -183,6 +195,20 @@ function makeMarker(kind) {
     pad.position.y = 0.2;
     pad.castShadow = true;
     group.add(pad);
+  } else if (kind === "start") {
+    const pole = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.15, 0.15, 4, 8),
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
+    );
+    pole.position.y = 2;
+    pole.castShadow = true;
+    const flag = new THREE.Mesh(
+      new THREE.BoxGeometry(1.6, 1.0, 0.06),
+      new THREE.MeshStandardMaterial({ color: colorFor(kind), side: THREE.DoubleSide }),
+    );
+    flag.position.set(0.8, 3.4, 0);
+    flag.castShadow = true;
+    group.add(pole, flag);
   } else {
     const pole = new THREE.Mesh(
       new THREE.CylinderGeometry(0.25, 0.25, 6, 8),
@@ -203,6 +229,27 @@ function makeMarker(kind) {
 
 function buildUI() {
   const panel = document.getElementById("panel");
+
+  const startDiv = document.createElement("div");
+  startDiv.className = "hole-row";
+  startDiv.innerHTML = `<strong>Course start</strong>`;
+  const startBtn = document.createElement("button");
+  startBtn.textContent = "Place start (parking)";
+  startBtn.className = "place-btn start";
+  startBtn.onclick = () => {
+    armedKey = START_KEY;
+    document.querySelectorAll(".place-btn").forEach((b) => b.classList.remove("armed"));
+    startBtn.classList.add("armed");
+    document.getElementById("hint").textContent = "Click on the terrain to place the course start (parking).";
+  };
+  const startStatus = document.createElement("span");
+  startStatus.className = "status";
+  startStatus.id = `status-${START_KEY}`;
+  startStatus.textContent = "not placed";
+  startDiv.appendChild(startBtn);
+  startDiv.appendChild(startStatus);
+  panel.appendChild(startDiv);
+
   HOLES.forEach((h) => {
     const holeDiv = document.createElement("div");
     holeDiv.className = "hole-row";
@@ -250,7 +297,7 @@ renderer.domElement.addEventListener("click", (ev) => {
   const elev = p.y + elevMin;
 
   if (markers[armedKey]) scene.remove(markers[armedKey]);
-  const kind = armedKey.split("-")[1];
+  const kind = armedKey === START_KEY ? "start" : armedKey.split("-")[1];
   const marker = makeMarker(kind);
   marker.position.set(p.x, p.y, p.z);
   scene.add(marker);
@@ -296,42 +343,118 @@ document.getElementById("export-btn").onclick = () => {
 };
 
 // ---------- Flythrough preview ----------
+// Walks start (parking) -> hole 1 tee -> hole 1 basket -> hole 2 tee -> ... in order.
+// A tee-to-basket leg on the same hole is simulated as an actual disc throw (arc +
+// turn/fade curve, spinning disc, chase camera); every other leg is a walking hop.
 
-let flying = false;
-document.getElementById("fly-btn").onclick = () => {
+function buildSequence() {
   const seq = [];
+  if (state[START_KEY]) seq.push({ kind: "start", hole: null, point: state[START_KEY] });
   HOLES.forEach((h) => {
     const tee = state[`${h}-tee`];
     const basket = state[`${h}-basket`];
-    if (tee) seq.push(tee);
-    if (basket) seq.push(basket);
+    if (tee) seq.push({ kind: "tee", hole: h, point: tee });
+    if (basket) seq.push({ kind: "basket", hole: h, point: basket });
   });
+  return seq;
+}
+
+function buildLegs(seq) {
+  const legs = [];
+  for (let i = 0; i < seq.length - 1; i++) {
+    const a = seq[i];
+    const b = seq[i + 1];
+    const isThrow = a.kind === "tee" && b.kind === "basket" && a.hole === b.hole;
+    const dist = Math.hypot(b.point.x - a.point.x, b.point.z - a.point.z);
+    legs.push({
+      type: isThrow ? "throw" : "walk",
+      from: a.point,
+      to: b.point,
+      duration: isThrow ? Math.min(2.5, 1.0 + dist * 0.02) : Math.min(6, 1.5 + dist * 0.05),
+    });
+  }
+  return legs;
+}
+
+let flying = false;
+let flyLegs = [];
+let flyIndex = 0;
+let flyElapsed = 0;
+
+document.getElementById("fly-btn").onclick = () => {
+  const seq = buildSequence();
   if (seq.length < 2) {
-    alert("Place at least two points first (e.g. hole 1 tee + basket).");
+    alert("Place the course start plus at least one hole (tee + basket) first.");
     return;
   }
+  flyLegs = buildLegs(seq);
   flying = true;
   flyIndex = 0;
-  flyPoints = seq;
-  flyT = 0;
+  flyElapsed = 0;
 };
 
-let flyPoints = [];
-let flyIndex = 0;
-let flyT = 0;
+function updateWalk(t, leg) {
+  const { from, to } = leg;
+  const cx = from.x + (to.x - from.x) * t;
+  const cz = from.z + (to.z - from.z) * t;
+  const cy = Math.max(from.y, to.y) + 25;
+  camera.position.set(cx, cy, cz + 35);
+  controls.target.set(cx, Math.max(from.y, to.y), cz);
+}
+
+function updateThrow(t, leg, dt) {
+  const { from, to } = leg;
+  const dx = to.x - from.x;
+  const dz = to.z - from.z;
+  const dist = Math.hypot(dx, dz) || 1;
+  const dirX = dx / dist;
+  const dirZ = dz / dist;
+  const perpX = -dirZ;
+  const perpZ = dirX;
+
+  const peak = Math.min(dist * 0.12, 12); // throw apex height
+  const curveAmp = Math.min(dist * 0.07, 7); // turn-then-fade lateral swing
+  const arc = 4 * peak * t * (1 - t);
+  const curve = curveAmp * Math.sin(Math.PI * t);
+
+  const releaseY = from.y + 1.1;
+  const landY = to.y + 0.9;
+  const px = from.x + dx * t + perpX * curve;
+  const pz = from.z + dz * t + perpZ * curve;
+  const py = releaseY + (landY - releaseY) * t + arc;
+
+  discMesh.visible = true;
+  discMesh.position.set(px, py, pz);
+  discMesh.rotation.y += dt * 30; // spin
+  discMesh.rotation.z = THREE.MathUtils.lerp(-0.05, 0.05, t); // slight settle wobble
+
+  const chaseDist = 10;
+  const chaseHeight = 5;
+  camera.position.set(px - dirX * chaseDist, py + chaseHeight, pz - dirZ * chaseDist);
+  controls.target.set(px, py, pz);
+}
 
 function updateFlight(dt) {
-  if (!flying || flyPoints.length < 2) return;
-  flyT += dt * 0.25;
-  if (flyT >= 1) { flyT = 0; flyIndex++; }
-  if (flyIndex >= flyPoints.length - 1) { flying = false; return; }
-  const a = flyPoints[flyIndex];
-  const b = flyPoints[flyIndex + 1];
-  const cx = a.x + (b.x - a.x) * flyT;
-  const cz = a.z + (b.z - a.z) * flyT;
-  const cy = Math.max(a.y, b.y) + 30;
-  camera.position.set(cx, cy, cz + 40);
-  controls.target.set(cx, Math.max(a.y, b.y), cz);
+  if (!flying || flyLegs.length === 0) return;
+  const leg = flyLegs[flyIndex];
+  flyElapsed += dt;
+  const t = Math.min(flyElapsed / leg.duration, 1);
+
+  if (leg.type === "throw") {
+    updateThrow(t, leg, dt);
+  } else {
+    discMesh.visible = false;
+    updateWalk(t, leg);
+  }
+
+  if (t >= 1) {
+    flyElapsed = 0;
+    flyIndex++;
+    if (flyIndex >= flyLegs.length) {
+      flying = false;
+      discMesh.visible = false;
+    }
+  }
 }
 
 // ---------- Render loop ----------
