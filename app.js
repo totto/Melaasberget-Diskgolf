@@ -173,6 +173,7 @@ Promise.all(TILES.tiles.map(loadTile)).then(() => {
 // ---------- Hole placement ----------
 
 const HOLES = [1, 2, 3, 4];
+const PARS = { 1: 1, 2: 3, 3: 2, 4: 2 };
 const POINT_KINDS = ["tee", "basket"];
 const START_KEY = "start";
 const state = {};
@@ -339,7 +340,7 @@ function buildUI() {
   HOLES.forEach((h) => {
     const holeDiv = document.createElement("div");
     holeDiv.className = "hole-row";
-    holeDiv.innerHTML = `<strong>Hole ${h}</strong>`;
+    holeDiv.innerHTML = `<strong>Hole ${h} — Par ${PARS[h]}</strong>`;
     POINT_KINDS.forEach((kind) => {
       const key = `${h}-${kind}`;
       const btn = document.createElement("button");
@@ -483,15 +484,17 @@ function buildLegs(seq) {
     const b = seq[i + 1];
     const isThrow = a.kind === "tee" && b.kind === "basket" && a.hole === b.hole;
     const dist = Math.hypot(b.point.x - a.point.x, b.point.z - a.point.z);
+    const hole = b.hole ?? a.hole; // whichever end belongs to a hole (start has hole=null)
     if (isThrow) {
       // Brief "set up the shot" beat at the tee before the disc actually launches.
-      legs.push({ type: "pause", from: a.point, to: b.point, duration: 0.9 });
+      legs.push({ type: "pause", from: a.point, to: b.point, duration: 0.9, hole });
     }
     legs.push({
       type: isThrow ? "throw" : "walk",
       from: a.point,
       to: b.point,
       duration: isThrow ? Math.min(2.5, 1.0 + dist * 0.02) : Math.min(6, 1.5 + dist * 0.05),
+      hole,
     });
   }
   return legs;
@@ -616,9 +619,24 @@ function updateThrow(t, leg, dt) {
   camera.updateProjectionMatrix();
 }
 
+let hudHole = null;
+function updateHud(hole) {
+  if (hole === hudHole) return;
+  hudHole = hole;
+  const el = document.getElementById("hole-hud");
+  if (!el) return;
+  if (hole) {
+    el.textContent = `Hole ${hole} · Par ${PARS[hole]}`;
+    el.style.display = "block";
+  } else {
+    el.style.display = "none";
+  }
+}
+
 function updateFlight(dt) {
   if (!flying || flyLegs.length === 0) return;
   const leg = flyLegs[flyIndex];
+  updateHud(leg.hole);
   flyElapsed += dt;
   const t = Math.min(flyElapsed / leg.duration, 1);
 
@@ -639,6 +657,7 @@ function updateFlight(dt) {
       flying = false;
       discMesh.visible = false;
       hideDiscTrail();
+      updateHud(null);
       camera.fov = 55;
       camera.updateProjectionMatrix();
       // Hand orientation back to OrbitControls from wherever the flight left the camera,

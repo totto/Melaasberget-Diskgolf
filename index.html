@@ -28,8 +28,13 @@
   .place-btn.tee { background: #2ecc71; }
   .place-btn.basket { background: #ff7f27; }
   .place-btn.start { background: #6ab0ff; }
-  .place-btn.start { background: #6ab0ff; }
   .place-btn.armed { outline: 2px solid #fff; }
+  #hole-hud {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%); display: none;
+    background: rgba(10, 14, 10, 0.72); color: #fff; font-size: 15px; font-weight: 700;
+    letter-spacing: 0.02em; padding: 8px 18px; border-radius: 8px; z-index: 10;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  }
   .status { display: block; font-size: 11px; color: #bbb; margin-bottom: 4px; }
   #hint { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.12); color: #ffd166; font-size: 12px; min-height: 16px; }
   #actions { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
@@ -50,6 +55,7 @@
 <body>
 <div id="loading">Loading satellite imagery… 0/0</div>
 <div id="app"></div>
+<div id="hole-hud"></div>
 
 <div id="panel">
   <h1>Melåsberget disc golf — course builder</h1>
