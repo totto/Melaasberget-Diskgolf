@@ -114,7 +114,11 @@ function buildTerrain(texture) {
       const elev = elevations[i * gridN + j];
       const [x, z] = latLonToLocal(lat, lon);
       positions.push(x, elev - elevMin, z);
-      uvs.push(lonToU(lon), 1 - latToV(lat));
+      // CanvasTexture flips vertically by default (flipY=true), so v should map
+      // directly to latToV, not 1-latToV -- the "1 -" here was double-flipping the
+      // satellite image north/south relative to the (unflipped) heightmap, which is
+      // why buildings/patio ended up displaced onto the wrong slopes.
+      uvs.push(lonToU(lon), latToV(lat));
     }
   }
 
