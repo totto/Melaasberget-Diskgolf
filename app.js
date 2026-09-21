@@ -383,6 +383,17 @@ const DEFAULT_PLACEMENTS = {
   "2-basket": { lat: 60.82664571303842, lon: 11.721020763098315, elevation: 196.039260515232 },
   "3-basket": { lat: 60.826806848158554, lon: 11.721372333176669, elevation: 197.16076997832974 },
   "4-basket": { lat: 60.82710849154285, lon: 11.721845459491078, elevation: 198.52997262344545 },
+  // Holes 5-7 (the way back) have no real measurement yet -- these placeholders retrace
+  // the outbound holes in reverse using coordinates we already have: tee off from where
+  // the previous hole landed, throw back toward the previous hole's tee spot. So 5/6/7
+  // mirror 3/2/1, with hole 4 as the turnaround. Overwrite via the UI once actually
+  // walked/thrown for real.
+  "5-tee": { lat: 60.82710849154285, lon: 11.721845459491078, elevation: 198.52997262344545 }, // = 4-basket
+  "5-basket": { lat: 60.82663251431697, lon: 11.72104690075786, elevation: 196.11763584996888 }, // = 3-tee
+  "6-tee": { lat: 60.82663251431697, lon: 11.72104690075786, elevation: 196.11763584996888 }, // = 3-tee (5-basket)
+  "6-basket": { lat: 60.827252557666206, lon: 11.72067139340881, elevation: 195.67743953386466 }, // = 2-tee
+  "7-tee": { lat: 60.827252557666206, lon: 11.72067139340881, elevation: 195.67743953386466 }, // = 2-tee (6-basket)
+  "7-basket": { lat: 60.82744269656808, lon: 11.721259779903708, elevation: 197.14099169615326 }, // = 1-tee
 };
 
 // Shared by defaults, localStorage restore, and manual clicks, so all three placement
