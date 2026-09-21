@@ -196,33 +196,76 @@ function makeMarker(kind) {
     pad.castShadow = true;
     group.add(pad);
   } else if (kind === "start") {
+    // Ground pad (visible from orbit/top-down, like the tee pads) + a tall flag with a
+    // glowing finial, so the start point reads clearly even from far away.
+    const pad = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.4, 2.4, 0.4, 20),
+      new THREE.MeshStandardMaterial({ color: colorFor(kind) }),
+    );
+    pad.position.y = 0.2;
+    pad.castShadow = true;
+
     const pole = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.15, 0.15, 4, 8),
+      new THREE.CylinderGeometry(0.15, 0.15, 7, 8),
       new THREE.MeshStandardMaterial({ color: 0x888888 }),
     );
-    pole.position.y = 2;
+    pole.position.y = 3.5;
     pole.castShadow = true;
+
     const flag = new THREE.Mesh(
-      new THREE.BoxGeometry(1.6, 1.0, 0.06),
+      new THREE.BoxGeometry(2.6, 1.6, 0.06),
       new THREE.MeshStandardMaterial({ color: colorFor(kind), side: THREE.DoubleSide }),
     );
-    flag.position.set(0.8, 3.4, 0);
+    flag.position.set(1.3, 6.2, 0);
     flag.castShadow = true;
-    group.add(pole, flag);
+
+    const finial = new THREE.Mesh(
+      new THREE.SphereGeometry(0.35, 16, 16),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x3498db, emissiveIntensity: 0.6 }),
+    );
+    finial.position.y = 7.1;
+
+    group.add(pad, pole, flag, finial);
   } else {
+    // A real "mobile" (portable) disc golf basket: weighted flat base, yellow pole, a
+    // catcher tray partway up, a wireframe chain shroud, and a top rim.
+    const YELLOW = 0xffd400;
+
+    const base = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.9, 0.9, 0.15, 16),
+      new THREE.MeshStandardMaterial({ color: 0x222222 }),
+    );
+    base.position.y = 0.075;
+    base.castShadow = true;
+
     const pole = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.25, 0.25, 6, 8),
-      new THREE.MeshStandardMaterial({ color: 0x888888 }),
+      new THREE.CylinderGeometry(0.12, 0.12, 5.4, 8),
+      new THREE.MeshStandardMaterial({ color: YELLOW }),
     );
-    pole.position.y = 3;
+    pole.position.y = 2.85;
     pole.castShadow = true;
-    const basket = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.4, 1.0, 1.2, 12, 1, true),
-      new THREE.MeshStandardMaterial({ color: colorFor(kind), side: THREE.DoubleSide }),
+
+    const tray = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.1, 0.5, 0.5, 12),
+      new THREE.MeshStandardMaterial({ color: YELLOW }),
     );
-    basket.position.y = 5.6;
-    basket.castShadow = true;
-    group.add(pole, basket);
+    tray.position.y = 1.0;
+    tray.castShadow = true;
+
+    const chains = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.3, 0.7, 2.2, 12, 1, true),
+      new THREE.MeshStandardMaterial({ color: YELLOW, side: THREE.DoubleSide, transparent: true, opacity: 0.55, wireframe: true }),
+    );
+    chains.position.y = 3.6;
+
+    const rim = new THREE.Mesh(
+      new THREE.TorusGeometry(1.3, 0.06, 8, 20),
+      new THREE.MeshStandardMaterial({ color: YELLOW }),
+    );
+    rim.rotation.x = Math.PI / 2;
+    rim.position.y = 4.7;
+
+    group.add(base, pole, tray, chains, rim);
   }
   return group;
 }
@@ -286,8 +329,8 @@ const DEFAULT_PLACEMENTS = {
   start: { lat: 60.82746012321331, lon: 11.721275733853467, elevation: 197.19862189521584 },
   "1-tee": { lat: 60.82727870995245, lon: 11.720750744649953, elevation: 195.85749312012138 },
   "2-tee": { lat: 60.82665352000554, lon: 11.72095956367916, elevation: 195.84659042335778 },
-  "3-tee": { lat: 60.82680736930721, lon: 11.721531234465367, elevation: 197.62694691183492 },
-  "4-tee": { lat: 60.826944833898814, lon: 11.72147335639348, elevation: 197.4362516054343 },
+  "3-tee": { lat: 60.8268059783387, lon: 11.721321371063738, elevation: 197.01790496778892 },
+  "4-tee": { lat: 60.827088779157016, lon: 11.721813950560279, elevation: 198.42329058793035 },
 };
 
 function applyDefaultPlacements() {
