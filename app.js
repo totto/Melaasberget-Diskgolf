@@ -929,6 +929,12 @@ function wireMobileToggle(toggleId, panelId) {
   const btn = document.getElementById(toggleId);
   const panel = document.getElementById(panelId);
   if (!btn || !panel) return;
+  // Phones/touch devices start collapsed so the 3D view isn't immediately covered by
+  // two full-height panels; desktop keeps the previous always-open behavior.
+  if (matchMedia("(max-width: 700px), (pointer: coarse)").matches) {
+    panel.classList.add("collapsed");
+    btn.textContent = "+";
+  }
   btn.onclick = () => {
     const collapsed = panel.classList.toggle("collapsed");
     btn.textContent = collapsed ? "+" : "−";
@@ -936,14 +942,3 @@ function wireMobileToggle(toggleId, panelId) {
 }
 wireMobileToggle("panel-toggle", "panel");
 wireMobileToggle("scorecard-toggle", "scorecard");
-
-// On phones/touch devices, start both panels collapsed so the 3D view is immediately
-// usable for orbiting/placing instead of being covered by two full panels; desktop
-// keeps them expanded by default, as before.
-if (matchMedia("(max-width: 700px), (pointer: coarse)").matches) {
-  ["panel", "scorecard"].forEach((id) => document.getElementById(id)?.classList.add("collapsed"));
-  ["panel-toggle", "scorecard-toggle"].forEach((id) => {
-    const btn = document.getElementById(id);
-    if (btn) btn.textContent = "+";
-  });
-}
