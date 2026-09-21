@@ -566,9 +566,20 @@ function updateWalk(t, leg) {
   const { from, to } = leg;
   const cx = from.x + (to.x - from.x) * t;
   const cz = from.z + (to.z - from.z) * t;
-  const cy = Math.max(from.y, to.y) + 25;
-  camera.position.set(cx, cy, cz + 35);
-  camera.lookAt(cx, Math.max(from.y, to.y), cz);
+  const cy = Math.max(from.y, to.y);
+
+  const dx = to.x - from.x;
+  const dz = to.z - from.z;
+  const dist = Math.hypot(dx, dz) || 1;
+  const dirX = dx / dist;
+  const dirZ = dz / dist;
+
+  // Elevated overview, but oriented along the actual walking direction (behind and
+  // above, looking ahead toward the destination) instead of a fixed south-facing
+  // offset -- the old fixed offset made this look sideways or even backward relative
+  // to travel on any hole whose walk didn't happen to run roughly north-south.
+  camera.position.set(cx - dirX * 20, cy + 22, cz - dirZ * 20);
+  camera.lookAt(cx + dirX * 15, cy + 3, cz + dirZ * 15);
 }
 
 function updatePause(t, leg, dt) {
