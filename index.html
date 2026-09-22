@@ -35,10 +35,11 @@
      +/- toggle. That also means no more per-panel positioning/overlap-avoidance
      rules: they all anchor the same way, below the nav bar. */
   .side-panel {
-    position: fixed; top: 58px; left: 12px; max-width: calc(100vw - 24px);
-    max-height: calc(100vh - 70px); overflow-y: auto; display: none;
+    position: fixed; top: 58px; left: 12px;
+    max-height: calc(100vh - 70px); overflow-y: auto; overflow-x: hidden; display: none;
     background: rgba(20, 24, 20, 0.92); color: #eee; border-radius: 10px; padding: 14px;
     font-size: 13px; z-index: 10; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    box-sizing: border-box;
   }
   .side-panel.active { display: block; }
   #panel { width: 340px; }
@@ -174,8 +175,14 @@
     #player-name-input, .score-input, #export-output { font-size: 16px; }
     .score-input { width: 34px; padding: 6px 2px; }
     /* Only one panel is ever visible at a time (see #topnav / showPanel() above), so
-       there's no overlap to avoid here anymore -- every panel can just be full-width. */
-    #panel, #scorecard, #gallery { width: calc(100vw - 24px); }
+       there's no overlap to avoid here anymore -- every panel can just be full-width.
+       Sized via left+right rather than width:calc(100vw - 24px): on mobile browsers,
+       100vw is computed against the layout viewport, which can be wider than what's
+       actually visible (a well-known quirk, often triggered by any wide inner content
+       like the scorecard table) -- so panels sized off it rendered a bit too wide,
+       running off the right edge. left+right lets the browser size the box against
+       the real visible viewport instead. */
+    #panel, #scorecard, #gallery { width: auto; left: 12px; right: 12px; }
     #hole-hud { font-size: 13px; padding: 6px 12px; }
     #debug-hud { font-size: 10px; }
     .photo-btn, #lightbox-delete, #lightbox-close { min-height: 40px; }
