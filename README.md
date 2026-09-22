@@ -38,9 +38,10 @@ terrain, real satellite imagery, click-to-place holes. 7 holes: 1-4 head out, 5-
 6. The **Photos** panel has two sections: a "Course gallery" — shared photos anyone visiting
    the site sees, added as static files in `public-photos/` (see that folder's README —
    requires repo push access, so it can't be spammed by random visitors) — and "My photos",
-   private-to-this-device shots you add yourself (opens the phone camera directly, or a file
-   picker on desktop). Private photos are stored in IndexedDB (not localStorage — photos are
-   too big for that), fully offline, never uploaded anywhere. Tap a thumbnail to view
+   private-to-this-device shots you add yourself via separate "Camera" (opens the phone
+   camera directly) and "Choose file" (photo library / file picker) buttons. Private photos
+   are stored in IndexedDB (not localStorage — photos are too big for that), fully offline,
+   never uploaded anywhere. Tap a thumbnail to view
    full-size; private photos can be deleted from there too.
 7. The scorecard has a "fun" strip under the table: a live leader (👑), an ace/eagle/birdie
    highlight feed, and per-hole course records pulled from past rounds. "Finish round" archives

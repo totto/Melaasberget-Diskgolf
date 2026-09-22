@@ -1272,21 +1272,27 @@ function initGallery() {
   holeSel.innerHTML =
     `<option value="">No hole</option>` + HOLES.map((h) => `<option value="${h}">Hole ${h}</option>`).join("");
 
-  const input = document.getElementById("photo-input");
-  input.addEventListener("change", async () => {
-    const file = input.files && input.files[0];
-    input.value = "";
-    if (!file) return;
-    const label = document.querySelector('label[for="photo-input"]');
-    label.classList.add("busy");
-    try {
-      await addPhoto(file, Number(holeSel.value) || null, document.getElementById("photo-caption").value.trim());
-      document.getElementById("photo-caption").value = "";
-    } catch (e) {
-      alert("Could not save photo: " + (e && e.message ? e.message : e));
-    } finally {
-      label.classList.remove("busy");
-    }
+  // Two separate inputs rather than one: capture="environment" forces the camera
+  // directly on most phones, but then some Android browsers won't offer the photo
+  // library at all -- so "Camera" and "Choose file" need to be genuinely separate
+  // entry points, not just one input with capture set.
+  ["photo-input-camera", "photo-input-file"].forEach((inputId) => {
+    const input = document.getElementById(inputId);
+    input.addEventListener("change", async () => {
+      const file = input.files && input.files[0];
+      input.value = "";
+      if (!file) return;
+      const buttons = document.querySelectorAll(".photo-btn");
+      buttons.forEach((b) => b.classList.add("busy"));
+      try {
+        await addPhoto(file, Number(holeSel.value) || null, document.getElementById("photo-caption").value.trim());
+        document.getElementById("photo-caption").value = "";
+      } catch (e) {
+        alert("Could not save photo: " + (e && e.message ? e.message : e));
+      } finally {
+        buttons.forEach((b) => b.classList.remove("busy"));
+      }
+    });
   });
 
   document.getElementById("lightbox-close").onclick = closeLightbox;
