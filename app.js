@@ -914,6 +914,90 @@ document.getElementById("clear-scores-btn").onclick = () => {
   renderScorecard();
 };
 
+// ---------- Weather ----------
+// Open-Meteo: free, no API key, CORS-friendly straight from the browser -- fits this
+// app's no-backend approach. Shown in the scorecard panel (see renderWeather) and
+// snapshotted into each saved round (see finishRound below) so round history retains
+// what conditions it was played in.
+
+const WMO_WEATHER = {
+  0: ["☀️", "Clear"],
+  1: ["\u{1F324}", "Mainly clear"],
+  2: ["⛅", "Partly cloudy"],
+  3: ["☁️", "Overcast"],
+  45: ["\u{1F32B}", "Fog"],
+  48: ["\u{1F32B}", "Fog"],
+  51: ["\u{1F326}", "Drizzle"],
+  53: ["\u{1F326}", "Drizzle"],
+  55: ["\u{1F326}", "Drizzle"],
+  56: ["\u{1F326}", "Freezing drizzle"],
+  57: ["\u{1F326}", "Freezing drizzle"],
+  61: ["\u{1F327}", "Rain"],
+  63: ["\u{1F327}", "Rain"],
+  65: ["\u{1F327}", "Heavy rain"],
+  66: ["\u{1F327}", "Freezing rain"],
+  67: ["\u{1F327}", "Freezing rain"],
+  71: ["\u{1F328}", "Snow"],
+  73: ["\u{1F328}", "Snow"],
+  75: ["\u{1F328}", "Heavy snow"],
+  77: ["\u{1F328}", "Snow grains"],
+  80: ["\u{1F326}", "Showers"],
+  81: ["\u{1F326}", "Showers"],
+  82: ["\u{1F326}", "Heavy showers"],
+  85: ["\u{1F328}", "Snow showers"],
+  86: ["\u{1F328}", "Snow showers"],
+  95: ["⛈️", "Thunderstorm"],
+  96: ["⛈️", "Thunderstorm + hail"],
+  99: ["⛈️", "Thunderstorm + hail"],
+};
+
+function degToCompass(deg) {
+  const dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  return dirs[Math.round(deg / 45) % 8];
+}
+
+let currentWeather = null;
+
+function renderWeather() {
+  const el = document.getElementById("weather");
+  if (!el) return;
+  if (!currentWeather) {
+    el.textContent = "";
+    return;
+  }
+  const [emoji, label] = WMO_WEATHER[currentWeather.code] || ["", "Weather"];
+  const parts = [`${emoji} ${label}, ${currentWeather.temp.toFixed(1)}°C`];
+  parts.push(`\u{1F4A8} ${currentWeather.windSpeed.toFixed(1)} m/s ${degToCompass(currentWeather.windDir)}`);
+  if (currentWeather.precip > 0) parts.push(`☔ ${currentWeather.precip.toFixed(1)}mm`);
+  el.textContent = parts.join(" · ");
+}
+
+async function fetchWeather() {
+  try {
+    const url =
+      `https://api.open-meteo.com/v1/forecast?latitude=${center.lat}&longitude=${center.lon}` +
+      `&current=temperature_2m,wind_speed_10m,wind_direction_10m,precipitation,weather_code` +
+      `&wind_speed_unit=ms&timezone=auto`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`weather fetch failed: ${res.status}`);
+    const data = await res.json();
+    currentWeather = {
+      temp: data.current.temperature_2m,
+      windSpeed: data.current.wind_speed_10m,
+      windDir: data.current.wind_direction_10m,
+      precip: data.current.precipitation,
+      code: data.current.weather_code,
+      time: data.current.time,
+    };
+    renderWeather();
+  } catch (e) {
+    // Weather is a nice-to-have -- never block anything else on the fetch failing
+    // (offline, API down, etc.). Just leave whatever was last shown, if anything.
+  }
+}
+fetchWeather();
+setInterval(fetchWeather, 10 * 60 * 1000); // conditions can change over a round
+
 // ---------- Scorecard fun ----------
 // Casual, low-stakes additions on top of the plain scorecard: a live leader line, an
 // ace/eagle/birdie highlight strip, and per-hole "course records" pulled from both the
@@ -989,7 +1073,11 @@ function finishRound() {
     return;
   }
   const rounds = readRounds();
-  rounds.push({ date: new Date().toISOString(), players: JSON.parse(JSON.stringify(players)) });
+  rounds.push({
+    date: new Date().toISOString(),
+    players: JSON.parse(JSON.stringify(players)),
+    weather: currentWeather,
+  });
   while (rounds.length > 100) rounds.shift();
   try {
     localStorage.setItem(ROUNDS_KEY, JSON.stringify(rounds));

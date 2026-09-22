@@ -43,6 +43,10 @@ terrain, real satellite imagery, click-to-place holes. 7 holes: 1-4 head out, 5-
    highlight feed, and per-hole course records pulled from past rounds. "Finish round" archives
    the current scores to a round history (used for those records) and offers to clear the card
    for a new round.
+8. Current weather (temperature, wind speed/direction, precipitation) shows at the top of the
+   Scorecard panel, fetched from [Open-Meteo](https://open-meteo.com) for the farm's exact
+   coordinates — free, no API key, refreshes every 10 minutes. Each "Finish round" also
+   snapshots the conditions into that round's history entry.
 
 ## Regenerating the data
 

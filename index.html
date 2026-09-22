@@ -89,6 +89,10 @@
     background: rgba(0,0,0,0.35); padding: 6px 10px; border-radius: 6px; z-index: 10;
   }
   #scorecard h2 { font-size: 14px; margin: 0; }
+  #weather {
+    margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.12);
+    color: #eee; font-size: 12px; min-height: 15px;
+  }
   #scorecard-table-wrap { overflow-x: auto; }
   #scorecard-table { border-collapse: collapse; width: 100%; }
   #scorecard-table th, #scorecard-table td {
@@ -211,6 +215,7 @@
     <h2>Scorecard</h2>
     <button class="panel-close" aria-label="Close">✕</button>
   </div>
+  <div id="weather"></div>
   <div id="scorecard-table-wrap">
     <table id="scorecard-table">
       <thead><tr id="scorecard-header"></tr></thead>
