@@ -2,7 +2,7 @@
 // embedded inline in index.html, so caching just the app shell + the CDN'd Three.js
 // modules is enough to make the entire thing work offline after the first visit --
 // useful out on the farm where connectivity can't be assumed.
-const CACHE_NAME = "melasberget-diskgolf-v6";
+const CACHE_NAME = "melasberget-diskgolf-v7";
 const PRECACHE_URLS = [
   "./",
   "./index.html",

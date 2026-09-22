@@ -455,6 +455,23 @@ function updatePlacementProgress() {
 // phone's reported GPS altitude -- phone altitude is commonly off by 10-50m without
 // external augmentation, while the terrain model is real EU-DEM 25m data for this
 // exact parcel. Horizontal position is what the phone is actually good at.
+// Elevation grid bounds plus a little slack for GPS drift and holes 5-7 (which have no
+// real measurement yet, so might sit slightly outside the mapped box). Without this, a
+// stale/bad fix far from the farm would silently get an elevation from
+// terrainElevationAt() clamping to the nearest grid edge instead of erroring -- a
+// wrong-but-plausible-looking number, not an obviously-broken one.
+const GPS_AREA_MARGIN_M = 30;
+function isWithinCourseArea(lat, lon) {
+  const latMargin = GPS_AREA_MARGIN_M / METERS_PER_DEG_LAT;
+  const lonMargin = GPS_AREA_MARGIN_M / metersPerDegLon(center.lat);
+  return (
+    lat >= bounds.latMin - latMargin &&
+    lat <= bounds.latMax + latMargin &&
+    lon >= bounds.lonMin - lonMargin &&
+    lon <= bounds.lonMax + lonMargin
+  );
+}
+
 function usePhoneGps() {
   if (!armedKey || !("geolocation" in navigator)) return;
   const hintEl = document.getElementById("hint");
@@ -466,6 +483,14 @@ function usePhoneGps() {
     (pos) => {
       gpsBtn.disabled = false;
       const { latitude, longitude, accuracy } = pos.coords;
+      if (!isWithinCourseArea(latitude, longitude)) {
+        hintEl.textContent = prevHint;
+        alert(
+          "That GPS location is outside the course area (Flotsvegen 5, Jømna) -- placement " +
+            "rejected. Move closer, wait for a better fix, or click the spot on the terrain instead.",
+        );
+        return;
+      }
       const [x, z] = latLonToLocal(latitude, longitude);
       const elevation = terrainElevationAt(x, z) + elevMin;
       placePoint(armedKey, latitude, longitude, elevation);
