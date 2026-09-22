@@ -1160,6 +1160,20 @@ async function decodeImage(file) {
   });
 }
 
+// If canvas.toBlob doesn't actually support encoding the requested type, it silently
+// falls back to image/png -- lossless, so a 1600px photo could balloon to several MB
+// instead of shrinking, defeating the point. Feature-detect once and use JPEG on the
+// (now rare) browsers that can't encode WebP via canvas.
+const PHOTO_MIME = (() => {
+  try {
+    const c = document.createElement("canvas");
+    c.width = c.height = 1;
+    return c.toDataURL("image/webp").startsWith("data:image/webp") ? "image/webp" : "image/jpeg";
+  } catch (e) {
+    return "image/jpeg";
+  }
+})();
+
 function scaleToBlob(img, maxDim, quality) {
   const w = img.width;
   const h = img.height;
@@ -1169,7 +1183,7 @@ function scaleToBlob(img, maxDim, quality) {
   canvas.height = Math.max(1, Math.round(h * scale));
   canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
   return new Promise((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode failed"))), "image/jpeg", quality),
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode failed"))), PHOTO_MIME, quality),
   );
 }
 
