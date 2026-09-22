@@ -35,10 +35,13 @@ terrain, real satellite imagery, click-to-place holes. 7 holes: 1-4 head out, 5-
    then throws — a spinning disc flies an arced, turn-then-fade path to the basket with a chase
    camera. Everything else (walking between a basket and the next tee) is a walking hop. No
    further clicks needed once it starts; it runs straight through to the last hole.
-6. The **Photos** panel lets you add a photo (opens the phone camera directly, or a file picker
-   on desktop), optionally tag it to a hole and caption it. Stored in IndexedDB (not
-   localStorage — photos are too big for that), fully offline, never uploaded anywhere. Tap a
-   thumbnail to view full-size / delete.
+6. The **Photos** panel has two sections: a "Course gallery" — shared photos anyone visiting
+   the site sees, added as static files in `public-photos/` (see that folder's README —
+   requires repo push access, so it can't be spammed by random visitors) — and "My photos",
+   private-to-this-device shots you add yourself (opens the phone camera directly, or a file
+   picker on desktop). Private photos are stored in IndexedDB (not localStorage — photos are
+   too big for that), fully offline, never uploaded anywhere. Tap a thumbnail to view
+   full-size; private photos can be deleted from there too.
 7. The scorecard has a "fun" strip under the table: a live leader (👑), an ace/eagle/birdie
    highlight feed, and per-hole course records pulled from past rounds. "Finish round" archives
    the current scores to a round history (used for those records) and offers to clear the card

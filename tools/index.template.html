@@ -130,6 +130,11 @@
   }
 
   #gallery h2 { font-size: 14px; margin: 0; }
+  .gallery-subhead {
+    font-size: 11px; color: #9ab; text-transform: uppercase; letter-spacing: 0.04em;
+    margin: 12px 0 6px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.12);
+  }
+  .gallery-subhead:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
   .gallery-add { display: flex; gap: 6px; margin-bottom: 8px; }
   .photo-btn {
     flex: 1; display: block; text-align: center; padding: 8px; border-radius: 6px;
@@ -141,7 +146,9 @@
     width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 6px; font-size: 12px;
     background: #0d1117; color: #eee; border: 1px solid #333; border-radius: 6px;
   }
-  #gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-height: 32vh; overflow-y: auto; }
+  #gallery-grid, #public-gallery-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-height: 32vh; overflow-y: auto;
+  }
   .gallery-thumb {
     position: relative; aspect-ratio: 1; background-size: cover; background-position: center;
     border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 0; cursor: pointer;
@@ -150,7 +157,7 @@
     position: absolute; top: 3px; left: 3px; background: #ff7f27; color: #201200;
     font-size: 10px; font-weight: 700; border-radius: 5px; padding: 1px 4px;
   }
-  #gallery-empty { color: #9ab; font-size: 12px; }
+  #gallery-empty, #public-gallery-empty { color: #9ab; font-size: 12px; }
 
   #lightbox {
     position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,0.92);
@@ -247,6 +254,12 @@
     <h2>Photos</h2>
     <button class="panel-close" aria-label="Close">✕</button>
   </div>
+
+  <h3 class="gallery-subhead">Course gallery</h3>
+  <div id="public-gallery-grid"></div>
+  <div id="public-gallery-empty">No course photos yet</div>
+
+  <h3 class="gallery-subhead">My photos (this device)</h3>
   <div class="gallery-add">
     <label class="photo-btn" for="photo-input">Add photo</label>
     <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>

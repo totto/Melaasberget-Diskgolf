@@ -1212,30 +1212,59 @@ async function renderGallery() {
   });
 }
 
-let lightboxUrl = null;
-let lightboxId = null;
+// Shared by both private (IndexedDB blob) and public (static file) photos -- only
+// private photos are deletable, so onDelete is omitted for public ones. Revoking any
+// previous blob: URL is each opener's own job (they know whether one exists), not
+// showLightbox's -- it just updates the DOM.
+let lightboxObjectUrl = null;
+
+function showLightbox(src, metaText, onDelete) {
+  document.getElementById("lightbox-img").src = src;
+  document.getElementById("lightbox-meta").textContent = metaText;
+  const delBtn = document.getElementById("lightbox-delete");
+  delBtn.style.display = onDelete ? "" : "none";
+  delBtn.onclick = onDelete
+    ? async () => {
+        if (!confirm("Delete this photo?")) return;
+        await onDelete();
+        closeLightbox();
+      }
+    : null;
+  document.getElementById("lightbox").hidden = false;
+}
+
 async function openLightbox(id) {
   const p = await photoTx("readonly", (s) => s.get(id));
   if (!p) return;
-  lightboxId = id;
-  if (lightboxUrl) URL.revokeObjectURL(lightboxUrl);
-  lightboxUrl = URL.createObjectURL(p.blob);
-  document.getElementById("lightbox-img").src = lightboxUrl;
+  if (lightboxObjectUrl) URL.revokeObjectURL(lightboxObjectUrl);
+  lightboxObjectUrl = URL.createObjectURL(p.blob);
   const parts = [];
   if (p.hole) parts.push(`Hole ${p.hole}`);
   parts.push(new Date(p.ts).toLocaleString());
   if (p.caption) parts.push(p.caption);
-  document.getElementById("lightbox-meta").textContent = parts.join(" — ");
-  document.getElementById("lightbox").hidden = false;
+  showLightbox(lightboxObjectUrl, parts.join(" — "), async () => {
+    await photoTx("readwrite", (s) => s.delete(id));
+    renderGallery();
+  });
+}
+
+function openPublicLightbox(entry) {
+  if (lightboxObjectUrl) {
+    URL.revokeObjectURL(lightboxObjectUrl);
+    lightboxObjectUrl = null;
+  }
+  const parts = [];
+  if (entry.hole) parts.push(`Hole ${entry.hole}`);
+  if (entry.caption) parts.push(entry.caption);
+  showLightbox(`./public-photos/${entry.file}`, parts.join(" — "), null);
 }
 
 function closeLightbox() {
   document.getElementById("lightbox").hidden = true;
-  if (lightboxUrl) {
-    URL.revokeObjectURL(lightboxUrl);
-    lightboxUrl = null;
+  if (lightboxObjectUrl) {
+    URL.revokeObjectURL(lightboxObjectUrl);
+    lightboxObjectUrl = null;
   }
-  lightboxId = null;
 }
 
 function initGallery() {
@@ -1264,18 +1293,41 @@ function initGallery() {
   document.getElementById("lightbox").addEventListener("click", (ev) => {
     if (ev.target.id === "lightbox") closeLightbox();
   });
-  document.getElementById("lightbox-delete").onclick = async () => {
-    if (lightboxId == null || !confirm("Delete this photo?")) return;
-    await photoTx("readwrite", (s) => s.delete(lightboxId));
-    closeLightbox();
-    renderGallery();
-  };
 
   // Ask the browser not to evict the photo store under storage pressure.
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   renderGallery().catch(() => {});
+  loadPublicGallery().catch(() => {});
 }
 initGallery();
+
+// Static files committed to public-photos/ -- see public-photos/README.md. No upload
+// endpoint or account needed: only whoever can push to this repo can add one, so
+// there's no open-write abuse surface like an unsigned third-party upload API would have.
+async function loadPublicGallery() {
+  const grid = document.getElementById("public-gallery-grid");
+  const emptyEl = document.getElementById("public-gallery-empty");
+  if (!grid) return;
+  const res = await fetch("./public-photos/manifest.json");
+  if (!res.ok) throw new Error(`manifest fetch failed: ${res.status}`);
+  const entries = await res.json();
+  grid.innerHTML = "";
+  emptyEl.hidden = entries.length > 0;
+  entries.forEach((entry) => {
+    const btn = document.createElement("button");
+    btn.className = "gallery-thumb";
+    btn.style.backgroundImage = `url(./public-photos/${entry.file})`;
+    btn.setAttribute("aria-label", entry.caption || "Photo");
+    if (entry.hole) {
+      const badge = document.createElement("span");
+      badge.className = "thumb-hole";
+      badge.textContent = entry.hole;
+      btn.appendChild(badge);
+    }
+    btn.onclick = () => openPublicLightbox(entry);
+    grid.appendChild(btn);
+  });
+}
 
 // ---------- PWA / mobile ----------
 
