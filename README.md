@@ -26,8 +26,11 @@ terrain, real satellite imagery, click-to-place holes. 7 holes: 1-4 head out, 5-
 3. The course start (parking) and holes 1-4 (tees + baskets) load pre-placed at their real
    measured positions. Holes 5-7 (the way back) load placeholder positions that just retrace
    1-4 in reverse — overwrite them via the UI once actually walked/thrown for real. Baskets
-   are portable, so if one's been moved, click its button again and click the new spot — it's
-   saved to localStorage and sticks across reloads.
+   are portable, so if one's been moved, click its button again and either click the new spot
+   on the terrain, or tap "Use my GPS location" if you're standing there with your phone
+   (elevation still comes from the terrain's own DEM data, not phone GPS altitude, which is
+   commonly off by tens of meters). Either way it's saved to localStorage and sticks across
+   reloads.
 4. "Copy placements" exports all placed points as JSON (lat/lon/elevation — durable across
    rebuilds, not tied to this specific Three.js scene).
 5. "Preview flythrough" auto-plays the whole course in order: start → hole 1 tee → hole 1 basket →

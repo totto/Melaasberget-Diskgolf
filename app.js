@@ -337,6 +337,8 @@ function armPlaceButton(btn, key, hintText) {
     document.querySelectorAll(".place-btn").forEach((b) => b.classList.remove("armed"));
     btn.classList.add("armed");
     document.getElementById("hint").textContent = hintText;
+    const gpsBtn = document.getElementById("gps-btn");
+    if (gpsBtn) gpsBtn.hidden = !("geolocation" in navigator);
   };
 }
 
@@ -448,6 +450,38 @@ function updatePlacementProgress() {
   fillEl.style.width = `${Math.round((placed / total) * 100)}%`;
   textEl.textContent = `${placed} / ${total} placed`;
 }
+
+// Elevation comes from the terrain's own DEM grid (via terrainElevationAt), not the
+// phone's reported GPS altitude -- phone altitude is commonly off by 10-50m without
+// external augmentation, while the terrain model is real EU-DEM 25m data for this
+// exact parcel. Horizontal position is what the phone is actually good at.
+function usePhoneGps() {
+  if (!armedKey || !("geolocation" in navigator)) return;
+  const hintEl = document.getElementById("hint");
+  const gpsBtn = document.getElementById("gps-btn");
+  const prevHint = hintEl.textContent;
+  hintEl.textContent = "Getting GPS location…";
+  gpsBtn.disabled = true;
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      gpsBtn.disabled = false;
+      const { latitude, longitude, accuracy } = pos.coords;
+      const [x, z] = latLonToLocal(latitude, longitude);
+      const elevation = terrainElevationAt(x, z) + elevMin;
+      placePoint(armedKey, latitude, longitude, elevation);
+      savePlacements();
+      drawHolePaths();
+      hintEl.textContent = `Placed from GPS (accuracy ~${Math.round(accuracy)}m). Tap "place" again to redo, or use another button.`;
+    },
+    (err) => {
+      gpsBtn.disabled = false;
+      hintEl.textContent = prevHint;
+      alert("Couldn't get GPS location: " + err.message);
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+  );
+}
+document.getElementById("gps-btn")?.addEventListener("click", usePhoneGps);
 
 const STORAGE_KEY = "melasberget-diskgolf-placements-v1";
 

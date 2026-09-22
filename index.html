@@ -121,6 +121,13 @@
   }
   .status { display: block; font-size: 11px; color: #bbb; margin-bottom: 4px; }
   #hint { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.12); color: #ffd166; font-size: 12px; min-height: 16px; }
+  #gps-btn {
+    display: block; width: 100%; margin-top: 8px; padding: 9px; font-size: 12px; font-weight: 700;
+    border: none; border-radius: 8px; cursor: pointer; background: #6ab0ff; color: #06213b;
+    transition: filter 0.15s ease;
+  }
+  #gps-btn:hover { filter: brightness(1.08); }
+  #gps-btn:disabled { opacity: 0.6; cursor: default; }
   #actions { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
   #actions button {
     flex: 1; font-size: 12px; padding: 9px; border: none; border-radius: 8px; cursor: pointer;
@@ -227,7 +234,7 @@
   /* Touch/mobile: bigger tap targets, and >=16px inputs so iOS Safari doesn't
      auto-zoom on focus. */
   @media (max-width: 700px), (pointer: coarse) {
-    .place-btn, #actions button, #scorecard-actions button, .nav-btn {
+    .place-btn, #actions button, #scorecard-actions button, .nav-btn, #gps-btn {
       padding: 10px 12px; font-size: 14px; min-height: 40px;
     }
     .remove-player-btn { min-height: 32px; min-width: 32px; font-size: 15px; }
@@ -265,12 +272,14 @@
     <h1>🥏 Melåsberget disc golf</h1>
     <button class="panel-close" aria-label="Close">✕</button>
   </div>
-  <p class="sub">Real terrain + satellite imagery of Flotsvegen 5, Jømna. Tap "place", then tap the ground.</p>
+  <p class="sub">Real terrain + satellite imagery of Flotsvegen 5, Jømna. Tap "place", then tap the
+    ground — or tap "place" and use your phone's GPS if you're standing at the spot.</p>
   <div id="placement-progress">
     <div id="placement-progress-bar"><div id="placement-progress-fill"></div></div>
     <div id="placement-progress-text">0 / 15 placed</div>
   </div>
   <div id="hint"></div>
+  <button id="gps-btn" hidden>📍 Use my GPS location</button>
   <div id="actions">
     <button id="export-btn">Copy placements (JSON)</button>
     <button id="fly-btn">Preview flythrough</button>
