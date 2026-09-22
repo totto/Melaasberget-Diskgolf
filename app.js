@@ -317,53 +317,72 @@ function makeMarker(kind) {
   return group;
 }
 
+function createStatusSpan(key) {
+  const status = document.createElement("span");
+  status.className = "status";
+  status.id = `status-${key}`;
+  const dot = document.createElement("span");
+  dot.className = "status-dot";
+  const label = document.createElement("span");
+  label.className = "status-label";
+  label.textContent = "Not placed";
+  status.appendChild(dot);
+  status.appendChild(label);
+  return status;
+}
+
+function armPlaceButton(btn, key, hintText) {
+  btn.onclick = () => {
+    armedKey = key;
+    document.querySelectorAll(".place-btn").forEach((b) => b.classList.remove("armed"));
+    btn.classList.add("armed");
+    document.getElementById("hint").textContent = hintText;
+  };
+}
+
 function buildUI() {
   const panel = document.getElementById("panel");
 
-  const startDiv = document.createElement("div");
-  startDiv.className = "hole-row";
-  startDiv.innerHTML = `<strong>Course start</strong>`;
+  const startCard = document.createElement("div");
+  startCard.className = "hole-card start-card";
+  startCard.innerHTML =
+    `<div class="hole-card-head">` +
+    `<span class="hole-badge start-badge">🚩</span>` +
+    `<span class="hole-title">Course start</span>` +
+    `</div>`;
+  const startRow = document.createElement("div");
+  startRow.className = "point-row";
   const startBtn = document.createElement("button");
   startBtn.textContent = "Place start (parking)";
   startBtn.className = "place-btn start";
-  startBtn.onclick = () => {
-    armedKey = START_KEY;
-    document.querySelectorAll(".place-btn").forEach((b) => b.classList.remove("armed"));
-    startBtn.classList.add("armed");
-    document.getElementById("hint").textContent = "Click on the terrain to place the course start (parking).";
-  };
-  const startStatus = document.createElement("span");
-  startStatus.className = "status";
-  startStatus.id = `status-${START_KEY}`;
-  startStatus.textContent = "not placed";
-  startDiv.appendChild(startBtn);
-  startDiv.appendChild(startStatus);
-  panel.appendChild(startDiv);
+  armPlaceButton(startBtn, START_KEY, "Click on the terrain to place the course start (parking).");
+  startRow.appendChild(startBtn);
+  startRow.appendChild(createStatusSpan(START_KEY));
+  startCard.appendChild(startRow);
+  panel.appendChild(startCard);
 
   HOLES.forEach((h) => {
-    const holeDiv = document.createElement("div");
-    holeDiv.className = "hole-row";
-    holeDiv.innerHTML = `<strong>Hole ${h} — Par ${PARS[h]}</strong>`;
+    const card = document.createElement("div");
+    card.className = "hole-card " + (h <= 4 ? "outbound" : "return");
+    card.innerHTML =
+      `<div class="hole-card-head">` +
+      `<span class="hole-badge">${h}</span>` +
+      `<span class="hole-title">Hole ${h}</span>` +
+      `<span class="par-pill">Par ${PARS[h]}</span>` +
+      `</div>`;
     POINT_KINDS.forEach((kind) => {
       const key = `${h}-${kind}`;
+      const row = document.createElement("div");
+      row.className = "point-row";
       const btn = document.createElement("button");
       btn.textContent = kind === "tee" ? "Place tee" : "Place basket";
       btn.className = "place-btn " + kind;
-      btn.onclick = () => {
-        armedKey = key;
-        document.querySelectorAll(".place-btn").forEach((b) => b.classList.remove("armed"));
-        btn.classList.add("armed");
-        document.getElementById("hint").textContent =
-          `Click on the terrain to place Hole ${h} ${kind}.`;
-      };
-      const status = document.createElement("span");
-      status.className = "status";
-      status.id = `status-${key}`;
-      status.textContent = "not placed";
-      holeDiv.appendChild(btn);
-      holeDiv.appendChild(status);
+      armPlaceButton(btn, key, `Click on the terrain to place Hole ${h} ${kind}.`);
+      row.appendChild(btn);
+      row.appendChild(createStatusSpan(key));
+      card.appendChild(row);
     });
-    panel.appendChild(holeDiv);
+    panel.appendChild(card);
   });
 }
 buildUI();
@@ -411,7 +430,23 @@ function placePoint(key, lat, lon, elevation) {
 
   state[key] = { x, y, z, lat, lon, elev: elevation };
   const statusEl = document.getElementById(`status-${key}`);
-  if (statusEl) statusEl.textContent = `placed (${lat.toFixed(6)}, ${lon.toFixed(6)})`;
+  if (statusEl) {
+    statusEl.classList.add("placed");
+    statusEl.title = `${lat.toFixed(6)}, ${lon.toFixed(6)}`; // exact coords on hover, not cluttering the row
+    const label = statusEl.querySelector(".status-label");
+    if (label) label.textContent = "Placed";
+  }
+  updatePlacementProgress();
+}
+
+function updatePlacementProgress() {
+  const fillEl = document.getElementById("placement-progress-fill");
+  const textEl = document.getElementById("placement-progress-text");
+  if (!fillEl || !textEl) return;
+  const total = 1 + HOLES.length * POINT_KINDS.length;
+  const placed = Object.keys(state).length;
+  fillEl.style.width = `${Math.round((placed / total) * 100)}%`;
+  textEl.textContent = `${placed} / ${total} placed`;
 }
 
 const STORAGE_KEY = "melasberget-diskgolf-placements-v1";

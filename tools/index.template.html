@@ -46,23 +46,68 @@
   #scorecard { width: 560px; font-size: 12px; }
   #gallery { width: 320px; font-size: 12px; }
 
-  #panel h1 { font-size: 15px; margin: 0; }
-  #panel .sub { color: #aaa; margin: 0 0 12px; font-size: 12px; }
+  #panel h1 { font-size: 16px; margin: 0; display: flex; align-items: center; gap: 6px; }
+  #panel .sub { color: #aaa; margin: 4px 0 10px; font-size: 12px; line-height: 1.4; }
   .panel-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
   .panel-close {
     background: none; border: none; color: #fff; font-size: 18px; line-height: 1; cursor: pointer;
     padding: 4px 6px; flex-shrink: 0;
   }
-  .hole-row { border-top: 1px solid rgba(255,255,255,0.12); padding: 8px 0; }
-  .hole-row strong { display: block; margin-bottom: 6px; }
-  .place-btn {
-    font-size: 12px; border: none; border-radius: 6px; padding: 5px 8px; margin: 0 6px 4px 0;
-    cursor: pointer; color: #111; font-weight: 600;
+
+  #placement-progress { margin-bottom: 12px; }
+  #placement-progress-bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,0.1); overflow: hidden; }
+  #placement-progress-fill {
+    height: 100%; width: 0%; border-radius: 999px;
+    background: linear-gradient(90deg, #2ecc71, #ffd166);
+    transition: width 0.3s ease;
   }
+  #placement-progress-text { margin-top: 4px; font-size: 11px; color: #9ab; text-align: right; }
+
+  .hole-card {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .hole-card:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.16); }
+  .hole-card.start-card { border-color: rgba(106,176,255,0.35); background: rgba(106,176,255,0.07); }
+  .hole-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .hole-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%; font-size: 11px; font-weight: 700;
+    background: rgba(255,255,255,0.14); color: #fff; flex-shrink: 0;
+  }
+  .hole-card.outbound .hole-badge { background: #2ecc71; color: #10241a; }
+  .hole-card.return .hole-badge { background: #8a6bff; color: #fff; }
+  .start-badge { font-size: 12px; background: #6ab0ff !important; color: #06213b !important; }
+  .hole-title { font-weight: 700; font-size: 13px; flex: 1; }
+  .par-pill {
+    font-size: 10px; font-weight: 700; color: #201200; background: #ffd166;
+    border-radius: 999px; padding: 2px 8px; flex-shrink: 0;
+  }
+
+  .point-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .point-row:first-of-type { margin-top: 0; }
+
+  .place-btn {
+    font-size: 12px; border: none; border-radius: 999px; padding: 6px 12px;
+    cursor: pointer; color: #111; font-weight: 700; flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    transition: filter 0.15s ease, box-shadow 0.15s ease;
+  }
+  .place-btn:hover { filter: brightness(1.1); }
   .place-btn.tee { background: #2ecc71; }
   .place-btn.basket { background: #ff7f27; }
   .place-btn.start { background: #6ab0ff; }
-  .place-btn.armed { outline: 2px solid #fff; }
+  .place-btn.armed { box-shadow: 0 0 0 3px rgba(255,209,102,0.65), 0 2px 6px rgba(0,0,0,0.25); }
+
+  .status { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #9ab; min-width: 0; }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #666; flex-shrink: 0;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+  }
+  .status.placed .status-dot { background: #2ecc71; box-shadow: 0 0 4px rgba(46,204,113,0.8); }
+  .status.placed .status-label { color: #eee; }
+  .status-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #hole-hud {
     position: fixed; top: 58px; left: 50%; transform: translateX(-50%); display: none;
     background: rgba(10, 14, 10, 0.72); color: #fff; font-size: 15px; font-weight: 700;
@@ -78,9 +123,13 @@
   #hint { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.12); color: #ffd166; font-size: 12px; min-height: 16px; }
   #actions { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
   #actions button {
-    flex: 1; font-size: 12px; padding: 7px; border: none; border-radius: 6px; cursor: pointer;
-    background: #4a6fa5; color: #fff; font-weight: 600;
+    flex: 1; font-size: 12px; padding: 9px; border: none; border-radius: 8px; cursor: pointer;
+    font-weight: 700; transition: filter 0.15s ease;
   }
+  #actions button:hover { filter: brightness(1.1); }
+  #fly-btn { order: -1; background: #ffd166; color: #201200; } /* primary action, shown first */
+  #export-btn { background: rgba(255,255,255,0.12); color: #eee; }
+  #reset-btn { background: rgba(224,108,117,0.18); color: #e88; }
   #export-output {
     width: 100%; height: 140px; margin-top: 8px; font-family: ui-monospace, monospace; font-size: 11px;
     display: none; background: #0d1117; color: #9fe6a0; border: 1px solid #333; border-radius: 6px; padding: 6px;
@@ -213,10 +262,14 @@
 
 <div id="panel" class="side-panel">
   <div class="panel-header">
-    <h1>Melåsberget disc golf — course builder</h1>
+    <h1>🥏 Melåsberget disc golf</h1>
     <button class="panel-close" aria-label="Close">✕</button>
   </div>
   <p class="sub">Real terrain + satellite imagery of Flotsvegen 5, Jømna. Tap "place", then tap the ground.</p>
+  <div id="placement-progress">
+    <div id="placement-progress-bar"><div id="placement-progress-fill"></div></div>
+    <div id="placement-progress-text">0 / 15 placed</div>
+  </div>
   <div id="hint"></div>
   <div id="actions">
     <button id="export-btn">Copy placements (JSON)</button>
