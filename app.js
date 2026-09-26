@@ -1430,7 +1430,11 @@ async function loadPublicGallery() {
   entries.forEach((entry) => {
     const btn = document.createElement("button");
     btn.className = "gallery-thumb";
-    btn.style.backgroundImage = `url(./public-photos/${entry.file})`;
+    // Thumbnail if the manifest has one -- the grid shows these as small squares, and
+    // the full-size files are several hundred KB each, so without this every visit that
+    // opens the Photos panel downloads (and the service worker caches) the entire gallery
+    // at full resolution. Falls back to the full file for entries with no `thumb`.
+    btn.style.backgroundImage = `url(./public-photos/${entry.thumb || entry.file})`;
     btn.setAttribute("aria-label", entry.caption || "Photo");
     if (entry.hole) {
       const badge = document.createElement("span");
